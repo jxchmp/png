@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 import struct
 
 class StructureReadError(Exception):
@@ -15,8 +15,8 @@ class StructureReadError(Exception):
     def __str__(self):
         return ("Problem occured while reading field '{name}' " +
                 "at index {index}: {message}").format(
-                    name = self.name
-                    index = self.index
+                    name = self.name,
+                    index = self.index,
                     message = self.message
                 )
 
@@ -57,30 +57,51 @@ class InvalidValueError(StructureReadError):
             "Value '{}' not valid. {}".format(value, reason)
          )
 
+class MetaStructure(type):
+    def __new__(meta, name, bases, attrs):
+        fields = list(attrs.get("_fields", []))
+        fields.reverse()
+        defaults = attrs.get("_defaults", {}).copy()
+        for base in bases:
+            if hasattr(base, "fields"):
+                basefields = list(base.fields)
+                basefields.reverse()
+                fields.extend(basefields)
+            elif hasattr(base, "_fields"):
+                basefields = list(base._fields)
+                basefields.reverse()
+                fields.extend(basefields)
+            if hasattr(base, "defaults"):
+                for key, item in base.defaults.items():
+                    if key not in defaults:
+                        defaults[key] = item
+            elif hasattr(base, "_defaults"):
+                for key, item in base._defaults.items():
+                    if key not in defaults:
+                        defaults[key] = item
+        fields.reverse() 
+        attrs = attrs.copy()
+        attrs["fields"] = tuple(fields)
+        attrs["defaults"] = defaults
+        return type.__new__(meta, name, bases, attrs)
+        
 
-class BaseStructure(object):
-    fields = ("raw_data", "size")
-    defaults = {"warnings": list}
-
-    def __new__(cls, *args, **kwargs):
-        if hasattr(super(cls), "fields"):
-            fields = list(cls.fields)
-            fields.extend(super().fields)
-            cls.fields = tuple(fields)
-        if hasattr(super(cls), "defaults"):
-            for key, value in super(cls).defaults.items():
-                if key not in cls.defaults:
-                    cls.defaults[key] = value
-        return cls(*args, **kwargs)
-
-    def __init__(self, name, **kwargs):
-        self.name = name
+class BaseStructure(object, metaclass=MetaStructure):
+    _fields = ("raw_data", "size")
+    def __init__(self, keep_raw_data=False, **kwargs):
+        if hasattr(self, "name"):
+            defaultname = self.name
+        else:
+            defaultname = self.__class__.__name__
+        self.name = kwargs.get("name", defaultname)
         field_class_args = list(self.fields)
         field_class_args.extend("warnings")
-        self._field_class = namedtuple(name, self.fields)
+        self._field_class = namedtuple(self.name, self.fields)
+        self.keep_raw_data = keep_raw_data
 
     def __call__(self, *args, **kwargs):
         fieldargs = {}
+        args = list(args)
         for field in self.fields:
             if args:
                 value = args.pop(0)
@@ -97,19 +118,18 @@ class BaseStructure(object):
         if args:
             raise TypeError("Too many arguments")
         if kwargs:
-            duplicates = [key for key in kwargs if key in self.fields])
+            duplicates = [key for key in kwargs if key in self.fields]
             if duplicates:
                 raise TypeError(
                     ("Keyword argument duplicates positional argument: " +
                     "{}").format(duplicates))
             else:
                 raise TypeError("Unknown keyword arguments: {}".format(
-                    kwargs.keys()
-                )
+                    kwargs.keys()))
         for field in self.fields:
-            validation_func = "validate_" + field)
+            validation_func = "validate_" + field
             if hasattr(self, validation_func):
-                warning = getattr(self, validation_func)(value, fieldargs)
+                warning = getattr(self, validation_func)(value, **fieldargs)
                 if warning:
                     fieldargs["warnings"].append(warning)
         return self._field_class(**fieldargs)
@@ -119,23 +139,30 @@ class BaseStructure(object):
         if len(val) == 0 or val is None: 
             raise EndOfBufferError(self.name, buffer_idx+offset)
         else:
-            return val
+            return val[0]
 
 
 class StaticStructure(BaseStructure):
-    def __init__(self, name, staticdata, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(self,  staticdata, **kwargs):
+        super().__init__(**kwargs)
         self.staticdata = staticdata
 
-    def consume_from_buffer(self, buffer, buffer_idx, **kwargs):
+    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
         raw_data = bytearray()
-        for i, value in enumerate(self.data):
-            buffer_val = self.consume_byte()
+        offset = 0
+        for i, value in enumerate(self.staticdata):
+            buffer_val = self.consume_byte(buffer, buffer_idx, offset)
+            offset = offset + 1
             raw_data.append(buffer_val) 
-            if buffer_val != self.staticdata[i]:
+            if buffer_val != value:
                 raise UnexpectedValueError(self.name, buffer_idx + offset,
-                    self.staticdata[i], buffer_val)
-        return self(raw_data, len(raw_data))
+                    value, buffer_val)
+        if not self.keep_raw_data:
+            size = len(raw_data)
+            raw_data = None
+        else:
+            size = len(raw_data)
+        return self(raw_data, size)
 
 
 class PayloadStructure(BaseStructure):
@@ -143,24 +170,23 @@ class PayloadStructure(BaseStructure):
     A structure in which one or more substructures provide metadata
     for a payload of some kind.
     """
+    _fields = ("payload",)
 
-    def __new__(cls, name, substructures):
-        cls.fields = tuple([sub.name for sub in substructures])
-        return super(cls).__new__(cls, name)
-
-    def __init__(self, name, substructures):
+    def __init__(self, substructures, **kwargs):
         self.substructures = substructures
-        super().__init__(self.name)       
+        super().__init__(**kwargs)       
 
-    def consume_from_buffer(self, buffer, buffer_idx, **kwargs):
-        d = {}
+    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
+        payload = {}
         offset = 0
         for substructure in self.substructures:
-            field = substructure.consume_from_buffer()
+            if isinstance(substructure, type):
+                substructure = substructure(payload)
+            field = substructure.consume_from_buffer(buffer,
+                                                     buffer_idx + offset)
             offset = offset + field.size
-            d[substructure.name] = substructure.consume_from_buffer(fields=d)
-        d["size"] = offset
-        return self(**d)
+            payload[substructure.name] = field
+        return self(None, offset, payload)
 
 
 class IntegerStructure(BaseStructure):
@@ -175,30 +201,32 @@ class IntegerStructure(BaseStructure):
        (8, False): "Q"
     }
 
-    fields = ("value")
+    _fields = ("value",)
 
-    def __init__(self, name, octets, byteorder="!", signed=True): 
-        super().__init__(name)
+    def __init__(self, octets, byteorder="!", signed=True, **kwargs): 
+        super().__init__(**kwargs)
         self.size = octets
         self.structformat = "{}{}".format(byteorder,
                             self.format_dict[(octets, signed)])
 
-    def consume_integer(self, buffer, buffer_idx):
+    def consume_integer(self, buffer, buffer_idx=0):
         raw_data = bytearray()
         for i in range(self.size):
-            raw_data.append(self.consume_byte(buffer_idx, i))
+            raw_data.append(self.consume_byte(buffer, buffer_idx, i))
         value = struct.unpack(self.structformat, raw_data)[0]
         return (raw_data, len(raw_data), value)
 
-    def consume_from_buffer(self, buffer, buffer_idx, **kwargs):
+    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
         raw_data, size, value = self.consume_integer(buffer, buffer_idx)
+        if not self.keep_raw_data:
+            raw_data = None
         return self(raw_data, size, value)
 
 
 class HomogenousSequenceStructure(IntegerStructure):
-    def __init__(self, name, octets_per_item, number_of_items,
-                 byteorder="!", signed=True): 
-        super().__init__(name, octets_per_item, byteorder, signed)
+    def __init__(self, octets_per_item, number_of_items,
+                 byteorder="!", signed=True, **kwargs): 
+        super().__init__(octets_per_item, byteorder, signed, **kwargs)
         self.number_of_items = number_of_items
 
     def consume_sequence(self, buffer, buffer_idx):
@@ -211,7 +239,42 @@ class HomogenousSequenceStructure(IntegerStructure):
             offset = offset + size
             raw_data.extend(data)
             seq.append(value)
-       return (raw_data, len(raw_data, tuple(seq)) 
+        if not self.keep_raw_data:
+            size = len(raw_data)
+            raw_data = None
+        return (raw_data, size, tuple(seq)) 
 
-    def consume_from_buffer(self, buffer, buffer_idx, **kwargs):
+    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
        return self(*self.consume_sequence(buffer, buffer_idx))
+
+
+class ContainerStructure(BaseStructure):
+    _fields = ("contents",)
+
+    def __init__(self, content_class, allow_buffer_end=True, **kwargs):
+        super().__init__(**kwargs)
+        self.content_class = content_class
+        self._stop = False
+        self.allow_buffer_end = allow_buffer_end
+
+    def should_stop(self):
+        return self._stop
+
+    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
+        contents = OrderedDict()
+        offset = 0
+        while not self.should_stop():
+            item = self.content_class(**contents)
+            try:
+                field = item.consume_from_buffer(buffer, buffer_idx + offset,
+                                                 **kwargs)
+            except EndOfBufferError:
+                if self.allow_buffer_end:
+                    field = None
+                    self._stop = True
+                else:
+                    raise
+            if field:
+                offset = offset + field.size
+                contents.setdefault(field.__class__.__name__, []).append(field)
+        return self(None, offset, contents)

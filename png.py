@@ -4,17 +4,20 @@ from structures import *
 from itertools import chain
 
 class ChunkTypeStructure(HomogenousSequenceStructure):
-    fields = ("string_rep", "ancillary", "private", "reserved",
+    name = "chunk_type"
+    _fields = ("string_rep", "ancillary", "private", "reserved",
               "safe_to_copy")
 
-    def __init__(self, name):
-        super().__init__(name, 1, 4, "!", False)
+    def __init__(self, **kwargs):
+        super().__init__(1, 4, "!", False, **kwargs)
 
     def consume_from_buffer(self, buffer, buffer_idx, **kwargs):
         raw_data, size, seq = self.consume_sequence(buffer, buffer_idx)
-        string_rep = self.get_string_reps(seq, buffer_idx)
+        string_rep = self.get_string_rep(seq, buffer_idx)
         properties = self.get_properties(seq, buffer_idx)
         ancillary, private, reserved, safe_to_copy = properties
+        if not self.keep_raw_data:
+            raw_data = None
         return self(raw_data, size, seq, string_rep, ancillary,
                     private, reserved, safe_to_copy)
 
@@ -31,17 +34,18 @@ class ChunkTypeStructure(HomogenousSequenceStructure):
                     buffer_idx + (i),
                     val,
                     "Value must be in range 65-90 or 97-122")
-       return "".join(stringrep)
+        return "".join(stringrep)
 
     def get_properties(self, seq, buffer_idx):
         return [bool(val & 32) for val in seq]
 
-    def validate_reserved(self, value, **kwargs):
-        if value:
+    def validate_reserved(self, validation_value, **kwargs):
+        if validation_value:
             return "Reserved bit is set."
 
 
 class ChunkCRCStructure(IntegerStructure):
+    name = "chunk_crc"
     crc_table = []
     for n in range(256):
         c = n
@@ -60,14 +64,57 @@ class ChunkCRCStructure(IntegerStructure):
         return crc
 
 
-class BasePNGChunk(PayloadStructure):
-    def __init__(self, name, payload)
+class ChunkPayloadStructure(object):
+    name = "payload"
+    payload_registry = {}
+    def __new__(cls, d):
+        chunk_type = d["chunk_type"].string_rep
+        chunk_length = d["length"].value
+        payload_cls = cls.payload_registry.get(
+                        chunk_type,
+                        UnknownChunkPayloadStructure)
+        return payload_cls(chunk_length)
+
+def registered_payload(cls):
+    k = cls.registration_id
+    d = ChunkPayloadStructure.payload_registry
+    d[k] = cls
+    return cls
+
+class UnknownChunkPayloadStructure(HomogenousSequenceStructure):
+    name = "unknown_payload"
+    def __init__(self, size):
+        super().__init__(1, size, "!", False, name=self.name)
+ 
+@registered_payload
+class IHDRPayloadStructure(PayloadStructure):
+    registration_id = "IHDR"
+    name = "ihdr_payload"
+
+    def __init__(self, size, **kwargs):
+        self.substructures = [
+            IntegerStructure(4, signed=False, name="width"),
+            IntegerStructure(4, signed=False, name="height"),
+            IntegerStructure(1, signed=False, name="bit_depth"),
+            IntegerStructure(1, signed=False, name="color_type"),
+            IntegerStructure(1, signed=False, name="compression_method"),
+            IntegerStructure(1, signed=False, name="filter_method"),
+            IntegerStructure(1, signed=False, name="interlace_method")
+        ]
+        super().__init__(**kwargs)
+        
+
+
+
+class PNGChunkStructure(PayloadStructure):
+    name = "chunk"
+    def __init__(self, **kwargs):
         substructures = []
-        substructures.append(IntegerStructure("length", 4, "!I"))
-        substructures.append(ChunkTypeStructure("chunk_type"))
-        substructures.append(ChunkPayloadStructure("payload", length, chunk_type))
-        substructures.append(ChunkCRCStructure("crc", 4, "!I"))
-        super().__init__(name, substructures)
+        substructures.append(IntegerStructure(4, "!", False, name="length"))
+        substructures.append(ChunkTypeStructure(name="chunk_type"))
+        substructures.append(ChunkPayloadStructure)
+        substructures.append(ChunkCRCStructure(4, "!", False, name="crc"))
+        super().__init__(substructures)
 
     def validate_length(self, value, field_dict):
         if value >= 2**31:
@@ -83,3 +130,24 @@ class BasePNGChunk(PayloadStructure):
             return "CRC {} did not match calculated CRC {}".format(
                 value, crc
             )
+
+class PNGFileSignatureStructure(StaticStructure):
+    name = "png_file_signature"
+    signature = b'\x89PNG\r\n\x1a\n'
+    def __init__(self):
+        super().__init__(self.signature)
+
+class PNGStructure(PayloadStructure):
+    def __init__(self):
+        substructures = []
+        substructures.append(PNGFileSignatureStructure())
+        substructures.append(ContainerStructure(PNGChunkStructure,
+                            name="png_chunks"))
+        super().__init__(substructures)
+
+if __name__ == "__main__":
+    import sys
+    with open(sys.argv[1], "rb") as f:
+        png = PNGStructure()
+        pngfield = png.consume_from_buffer(f, 0)
+        print(pngfield)
