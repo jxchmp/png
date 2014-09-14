@@ -88,6 +88,8 @@ class MetaStructure(type):
 
 class BaseStructure(object, metaclass=MetaStructure):
     _fields = ("raw_data", "size")
+    _defaults = {"warnings": list}
+
     def __init__(self, keep_raw_data=False, **kwargs):
         if hasattr(self, "name"):
             defaultname = self.name
@@ -95,8 +97,11 @@ class BaseStructure(object, metaclass=MetaStructure):
             defaultname = self.__class__.__name__
         self.name = kwargs.get("name", defaultname)
         field_class_args = list(self.fields)
-        field_class_args.extend("warnings")
-        self._field_class = namedtuple(self.name, self.fields)
+        field_class_args.append("warnings")
+        self._field_class = namedtuple(self.name, field_class_args)
+        fields = list(self.fields)
+        fields.append("warnings")
+        self.fields = tuple(fields)
         self.keep_raw_data = keep_raw_data
 
     def __call__(self, *args, **kwargs):
@@ -108,9 +113,9 @@ class BaseStructure(object, metaclass=MetaStructure):
             elif field in kwargs:
                 value = kwargs.pop(field)
             elif field in self.defaults:
-                value = defaults[field]
-                if callable(val):
-                    value = val()
+                value = self.defaults[field]
+                if callable(value):
+                    value = value()
             else:
                 raise TypeError("Expected argument '{}' missing".format(
                    field))
@@ -129,6 +134,7 @@ class BaseStructure(object, metaclass=MetaStructure):
         for field in self.fields:
             validation_func = "validate_" + field
             if hasattr(self, validation_func):
+                value = fieldargs[field]
                 warning = getattr(self, validation_func)(value, **fieldargs)
                 if warning:
                     fieldargs["warnings"].append(warning)
@@ -140,6 +146,17 @@ class BaseStructure(object, metaclass=MetaStructure):
             raise EndOfBufferError(self.name, buffer_idx+offset)
         else:
             return val[0]
+
+class DerivedStructure(BaseStructure):
+    _fields = ("value",)
+
+    def __init__(self, derivation_function, **kwargs):
+        super().__init__(**kwargs)
+        self.derivation_function = derivation_function
+
+    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
+        value = self.derivation_function(**kwargs)
+        return self(None, 0, value)        
 
 
 class StaticStructure(BaseStructure):
@@ -170,10 +187,13 @@ class PayloadStructure(BaseStructure):
     A structure in which one or more substructures provide metadata
     for a payload of some kind.
     """
-    _fields = ("payload",)
-
+    name = "payload"
+    
     def __init__(self, substructures, **kwargs):
         self.substructures = substructures
+        self.fields = list(self.fields)
+        self.fields.extend(sub.name for sub in substructures)
+        self.fields = tuple(self.fields)
         super().__init__(**kwargs)       
 
     def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
@@ -183,10 +203,11 @@ class PayloadStructure(BaseStructure):
             if isinstance(substructure, type):
                 substructure = substructure(payload)
             field = substructure.consume_from_buffer(buffer,
-                                                     buffer_idx + offset)
+                                                     buffer_idx + offset,
+                                                     **payload)
             offset = offset + field.size
             payload[substructure.name] = field
-        return self(None, offset, payload)
+        return self(None, offset, **payload)
 
 
 class IntegerStructure(BaseStructure):
@@ -221,6 +242,23 @@ class IntegerStructure(BaseStructure):
         if not self.keep_raw_data:
             raw_data = None
         return self(raw_data, size, value)
+
+
+class CodedIntegerStructure(IntegerStructure):
+    _fields = ("meaning",)
+
+    def __init__(self, mapping, octets, byteorder="!", signed=True,
+                  **kwargs):
+        self.mapping = mapping
+        super().__init__(octets, byteorder, signed, **kwargs)
+   
+    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
+        raw_data, size, value = self.consume_integer(buffer, buffer_idx)
+        if not self.keep_raw_data:
+            raw_data = None
+        meaning = self.mapping.get(value, "unknown")
+        return self(raw_data, size, value, meaning)
+
 
 
 class HomogenousSequenceStructure(IntegerStructure):

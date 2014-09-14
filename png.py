@@ -82,28 +82,107 @@ def registered_payload(cls):
     return cls
 
 class UnknownChunkPayloadStructure(HomogenousSequenceStructure):
-    name = "unknown_payload"
+    name = "payload"
     def __init__(self, size):
         super().__init__(1, size, "!", False, name=self.name)
+
+    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
+        field = super().consume_from_buffer(buffer, buffer_idx, **kwargs)
+        return field._replace(value = "...")
  
 @registered_payload
 class IHDRPayloadStructure(PayloadStructure):
     registration_id = "IHDR"
-    name = "ihdr_payload"
 
     def __init__(self, size, **kwargs):
-        self.substructures = [
+        substructures = [
             IntegerStructure(4, signed=False, name="width"),
             IntegerStructure(4, signed=False, name="height"),
             IntegerStructure(1, signed=False, name="bit_depth"),
-            IntegerStructure(1, signed=False, name="color_type"),
-            IntegerStructure(1, signed=False, name="compression_method"),
-            IntegerStructure(1, signed=False, name="filter_method"),
-            IntegerStructure(1, signed=False, name="interlace_method")
+            ColorTypeStructure(1, signed=False),
+            CodedIntegerStructure({0: "deflate/inflate"}, 1,
+                                  signed=False, name="compression_method"),
+            CodedIntegerStructure({0: "adaptive"}, 1,
+                                  signed=False, name="filter_method"),
+            CodedIntegerStructure({0: "no interlacing",
+                                   1: "Adam7"}, 1,
+                                  signed=False, name="interlace_method"),
+            DerivedStructure(self.derive_sample_depth, name="sample_depth")
         ]
-        super().__init__(**kwargs)
-        
+        super().__init__(substructures, **kwargs)
 
+    def derive_sample_depth(self, **kwargs):
+        if kwargs["bit_depth"].value != 3:
+            return 8
+        else:
+            return kwargs["bit_depth"]
+
+    def validate_dimension(self, value, dimension):
+        if value == 0:
+            return "Zero {} is not allowed".format(dimension)
+        elif value >= 2**31:
+            return "Maximum {} is {}".format(dimension, (2**31) -1)
+        
+    def validate_width(self, validation_value, **kwargs):
+        return self.validate_dimension(validation_value.value, "width")
+
+    def validate_height(self, validation_value, **kwargs):
+        return self.validate_dimension(validation_value.value, "height")
+
+    def validate_bit_depth(self, validation_value, **kwargs):
+        if validation_value.value not in [1,2,4,8,16]:
+            return "Allowed values are 1,2,4,8 and 16"
+
+    allowed_color_type_bit_depths = {
+        0: (1,2,4,8,16),
+        2: (8,16),
+        3: (1,2,4,8),
+        4: (8,16),
+        6: (8,16)
+    }
+
+    def validate_color_type(self, validation_value, **kwargs):
+        color_type = validation_value.value
+        bit_depth = kwargs["bit_depth"].value
+        allowed = self.allowed_color_type_bit_depths.get(color_type)
+        if allowed:
+            if bit_depth not in allowed:
+                return "Allowed bit depths for color_type are {}".format(
+                    allowed
+                )
+        else:
+           return "Unknown color type so no known allowed bit depths" 
+
+    def validate_compression_method(self, validation_value, **kwargs):
+        if validation_value.value != 0:
+            return "Unknown compression method. Only method 0 is known."
+
+    def validate_filter_method(self, validation_value, **kwargs):
+        if validation_value.value != 0:
+            return "Unknown filter method. Only method 0 is known."
+
+    def validate_interlace__method(self, validation_value, **kwargs):
+        if validation_value.value not in (0,1):
+            return "Unknown filter method. Only methods 0 and 1 are known."
+
+
+
+class ColorTypeStructure(IntegerStructure):
+    name = "color_type"
+    _fields = ("palette_used", "color_used", "alpha_channel_used")
+
+    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
+        raw_data, size, value = super().consume_integer(
+                                        buffer, buffer_idx)
+        palette_used = bool(value & 1)
+        color_used = bool(value & 2)
+        alpha_channel_used = bool(value & 4)
+        return self(raw_data, size, value, palette_used, color_used,
+                    alpha_channel_used)
+
+    def validate_value(self, validation_value, **kwargs):
+        if validation_value not in [0,2,3,4,6]:
+            return "Permitted values are 0,2,4,4 and 6"
 
 
 class PNGChunkStructure(PayloadStructure):
@@ -116,20 +195,25 @@ class PNGChunkStructure(PayloadStructure):
         substructures.append(ChunkCRCStructure(4, "!", False, name="crc"))
         super().__init__(substructures)
 
-    def validate_length(self, value, field_dict):
-        if value >= 2**31:
+    def validate_length(self, validation_value, **kwargs):
+        if validation_value.value >= 2**31:
             return "Length of {} exceeds maximum value {}".format(
-                value, (2**31)-1
+                validation_value.value, (2**31)-1
             )
 
-    def validate_crc(self, value, field_dict):
-        data_iterator = chain(field_dict["chunk_type"].raw_data,
-                              field_dict["payload"].raw_data)
-        crc = ChunkCRCStructure.generate_crc(data_iterator, value)
-        if crc != value:
-            return "CRC {} did not match calculated CRC {}".format(
-                value, crc
-            )
+    def validate_crc(self, validation_value, **kwargs):
+        if (kwargs["chunk_type"].raw_data is not None and
+            kwargs["payload"].raw_data is not None):
+            data_iterator = chain(kwargs["chunk_type"].raw_data,
+                                  kwargs["payload"].raw_data)
+            crc = ChunkCRCStructure.generate_crc(data_iterator,
+                                            validation_value.value)
+            if crc != validation_value.value:
+                return "CRC {} did not match calculated CRC {}".format(
+                    validation_value,value, crc
+                )
+        else:
+            return "Unable to validate CRC"
 
 class PNGFileSignatureStructure(StaticStructure):
     name = "png_file_signature"
