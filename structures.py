@@ -3,6 +3,7 @@
 from collections import namedtuple, OrderedDict
 import struct
 
+
 class StructureReadError(Exception):
     """
     Base exception for errors found while reading a structure.
@@ -57,6 +58,134 @@ class InvalidValueError(StructureReadError):
             "Value '{}' not valid. {}".format(value, reason)
          )
 
+
+
+class StructureNode(object):
+    def __init__(self, parent, name, clsname, fields, defaults, data):
+        self.parent = parent
+        self.name = name
+        self.clsname = clsname
+        self.children = OrderedDict()
+        self.fields = fields
+        self.defaults = defaults
+        self.set_children(fields, defaults, data)
+
+    @property
+    def raw_data(self):
+        if ("raw_data" in self.children
+            and self.children["raw_data"] is not None):
+            return self.children["raw_data"]
+        else:
+            raw_data = bytearray()
+            for name, child in self:
+                if isinstance(child, self.__class__):
+                    raw_data.extend(child.raw_data)
+            return raw_data
+
+    @raw_data.setter
+    def raw_data(self, value):
+        self.children["raw_data"] = value
+
+    def iter_depth_first(self):
+        stack = [self]
+        while stack:
+            node = stack.pop()
+            childnodes = []
+            for name, node in node.iterchildren():
+                childnodes.append(node)
+            childnodes.reverse()
+            stack.extend(childnodes)
+            yield node
+
+    def find(self, clsname, attributes=(), limit=None):
+        matches = 0
+        for node in self.iter_depth_first():
+            if node.clsname == clsname:
+                matched = all([node.children.get(attrib) == val
+                               for attrib, val in attributes])
+                if matched:
+                    yield node
+                    if limit is not None:
+                        matches = matches + 1
+                        if matches == limit:
+                            break
+
+    def find_one(self, clsname, attributes=()):
+        matched = [node for node in self.find(clsname, attributes, 1)]
+        if matched:
+            return matches[0]
+        else:
+            return None
+
+    def find_all(self, clsname, attributes=()):
+        return [node for node in self.find(clsname, attributes)]
+
+    def __str__(self):
+        return "StructureNode({})".format(self.name)
+
+    def __getattr__(self, name):
+        children = super().__getattribute__("children")
+        if name in children:
+            return children[name]
+        else:
+            raise AttributeError(
+                "'{}' object has no attribute '{}'".format(
+                    str(self), name
+                )
+            )
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return [item for item in self.children.items()][key]
+        else:
+            return self.children[key]
+
+    def __setitem__(self, key, value):
+        self.children[key] = value
+
+    def setdefault(self, key, default):
+        return self.children.setdefault(key, default)
+
+    def __iter__(self):
+        return iter(self.children.items())
+        
+    def __reversed__(self):
+        return reversed([el for el in self.children.items()])
+
+    def iterattributes(self):
+        for name, child in self:
+            if not isinstance(child, self.__class__):
+                yield (name, child)
+
+    def iterchildren(self):
+        for name, child in self:
+            if isinstance(child, self.__class__):
+                yield (name, child)
+            
+
+    def set_children(self, fields,  defaults, data):
+        if not data:
+            return
+        for i, field in enumerate(fields):
+            value_found = False
+            value = None
+            if field in data:
+                value = data[field]
+                value_found = True
+            if value_found:
+                self.children[field] = value
+            else:
+                if field in defaults:
+                    default_value = defaults[field]
+                    if callable(default_value):
+                        default_value = default_value()
+                    self.children[field] = default_value
+                else:
+                    raise TypeError(
+                        "Expected argument '{}' missing".format(
+                                                          field))
+
+
 class MetaStructure(type):
     def __new__(meta, name, bases, attrs):
         fields = list(attrs.get("_fields", []))
@@ -84,61 +213,40 @@ class MetaStructure(type):
         attrs["fields"] = tuple(fields)
         attrs["defaults"] = defaults
         return type.__new__(meta, name, bases, attrs)
-        
-
+       
 class BaseStructure(object, metaclass=MetaStructure):
     _fields = ("raw_data", "size")
     _defaults = {"warnings": list}
 
-    def __init__(self, keep_raw_data=False, **kwargs):
+    def __init__(self, root, parent_node, keep_raw_data=True, **kwargs):
+        self.root = root
         if hasattr(self, "name"):
             defaultname = self.name
         else:
             defaultname = self.__class__.__name__
         self.name = kwargs.get("name", defaultname)
+        self.node = StructureNode(parent_node, self.name,
+                                  self.__class__.__name__,
+                                  self.fields, self.defaults,  {})
         field_class_args = list(self.fields)
-        field_class_args.append("warnings")
+        if "warnings" not in field_class_args:
+            field_class_args.append("warnings")
         self._field_class = namedtuple(self.name, field_class_args)
         fields = list(self.fields)
-        fields.append("warnings")
+        if "warnings" not in fields:
+            fields.append("warnings")
         self.fields = tuple(fields)
         self.keep_raw_data = keep_raw_data
 
-    def __call__(self, *args, **kwargs):
-        fieldargs = {}
-        args = list(args)
-        for field in self.fields:
-            if args:
-                value = args.pop(0)
-            elif field in kwargs:
-                value = kwargs.pop(field)
-            elif field in self.defaults:
-                value = self.defaults[field]
-                if callable(value):
-                    value = value()
-            else:
-                raise TypeError("Expected argument '{}' missing".format(
-                   field))
-            fieldargs[field] = value
-        if args:
-            raise TypeError("Too many arguments")
-        if kwargs:
-            duplicates = [key for key in kwargs if key in self.fields]
-            if duplicates:
-                raise TypeError(
-                    ("Keyword argument duplicates positional argument: " +
-                    "{}").format(duplicates))
-            else:
-                raise TypeError("Unknown keyword arguments: {}".format(
-                    kwargs.keys()))
+    def __call__(self):
         for field in self.fields:
             validation_func = "validate_" + field
             if hasattr(self, validation_func):
-                value = fieldargs[field]
-                warning = getattr(self, validation_func)(value, **fieldargs)
+                value = self.node[field]
+                warning = getattr(self, validation_func)(value)
                 if warning:
-                    fieldargs["warnings"].append(warning)
-        return self._field_class(**fieldargs)
+                    self.warn(warning)
+        return self.node
 
     def consume_byte(self, buffer, buffer_idx, offset):
         val = buffer.read(1)
@@ -147,21 +255,31 @@ class BaseStructure(object, metaclass=MetaStructure):
         else:
             return val[0]
 
+    def warn(self, message):
+        self.node.setdefault("warnings", []).append(message)
+
+class RootStructure(object):
+    def __init__(self):
+        self.node = StructureNode(None, "root", self.__class__.__name__,
+                                  [], {}, {})
+
 class DerivedStructure(BaseStructure):
     _fields = ("value",)
 
-    def __init__(self, derivation_function, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, root, parent_node, derivation_function, **kwargs):
+        super().__init__(root, parent_node, **kwargs)
         self.derivation_function = derivation_function
 
     def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
         value = self.derivation_function(**kwargs)
-        return self(None, 0, value)        
+        self.node["size"] = 0
+        self.node["value"] = value
+        return self()
 
 
 class StaticStructure(BaseStructure):
-    def __init__(self,  staticdata, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, root, parent_node,  staticdata, **kwargs):
+        super().__init__(root, parent_node, **kwargs)
         self.staticdata = staticdata
 
     def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
@@ -174,13 +292,9 @@ class StaticStructure(BaseStructure):
             if buffer_val != value:
                 raise UnexpectedValueError(self.name, buffer_idx + offset,
                     value, buffer_val)
-        if not self.keep_raw_data:
-            size = len(raw_data)
-            raw_data = None
-        else:
-            size = len(raw_data)
-        return self(raw_data, size)
-
+        self.node["raw_data"] = raw_data
+        self.node["size"] = len(raw_data)
+        return self()
 
 class PayloadStructure(BaseStructure):
     """
@@ -189,25 +303,44 @@ class PayloadStructure(BaseStructure):
     """
     name = "payload"
     
-    def __init__(self, substructures, **kwargs):
+    def __init__(self, root, parent_node, substructures, **kwargs):
         self.substructures = substructures
         self.fields = list(self.fields)
         self.fields.extend(sub.name for sub in substructures)
         self.fields = tuple(self.fields)
-        super().__init__(**kwargs)       
+        super().__init__(root, parent_node, **kwargs)       
+        for substructure in substructures:
+            substructure.parent = self.node
+
 
     def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
-        payload = {}
         offset = 0
+        raw_data = bytearray()
         for substructure in self.substructures:
+            ok_to_read = True
             if isinstance(substructure, type):
-                substructure = substructure(payload)
-            field = substructure.consume_from_buffer(buffer,
-                                                     buffer_idx + offset,
-                                                     **payload)
-            offset = offset + field.size
-            payload[substructure.name] = field
-        return self(None, offset, **payload)
+                try:
+                    inst = substructure(self.root, self.node)
+                except ValueError as err:
+                    self.warn("Error initialising {}: {}".format(
+                        substructure, err.message))
+                    ok_to_read = False
+                else:
+                    substructure = inst
+            if ok_to_read:
+                field = substructure.consume_from_buffer(buffer,
+                                                         buffer_idx + offset,
+                                                         **self.node.children)
+                offset = offset + field.size
+                self.node[substructure.name] = field
+            else:
+                size = substructure.get_size(self.node)
+                for i in range(size):
+                    self.consume_byte()
+                offset = offset + size
+        self.node["raw_data"] = None
+        self.node["size"] = offset
+        return self()
 
 
 class IntegerStructure(BaseStructure):
@@ -224,47 +357,53 @@ class IntegerStructure(BaseStructure):
 
     _fields = ("value",)
 
-    def __init__(self, octets, byteorder="!", signed=True, **kwargs): 
-        super().__init__(**kwargs)
-        self.size = octets
+    def __init__(self, root, parent_node, octets, seq_length=1, byteorder="!",
+                 signed=True, **kwargs): 
+        super().__init__(root, parent_node, **kwargs)
+        self.size = octets * seq_length
         self.structformat = "{}{}".format(byteorder,
-                            self.format_dict[(octets, signed)])
+                            (self.format_dict[(octets, signed)] * seq_length))
 
     def consume_integer(self, buffer, buffer_idx=0):
         raw_data = bytearray()
         for i in range(self.size):
             raw_data.append(self.consume_byte(buffer, buffer_idx, i))
-        value = struct.unpack(self.structformat, raw_data)[0]
+        value = struct.unpack(self.structformat, raw_data)
+        if len(value) == 1:
+            value = value[0]
         return (raw_data, len(raw_data), value)
 
     def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
         raw_data, size, value = self.consume_integer(buffer, buffer_idx)
-        if not self.keep_raw_data:
-            raw_data = None
-        return self(raw_data, size, value)
-
+        self.node["raw_data"] = raw_data
+        self.node["size"] = size
+        self.node["value"] = value
+        return self() 
 
 class CodedIntegerStructure(IntegerStructure):
     _fields = ("meaning",)
 
-    def __init__(self, mapping, octets, byteorder="!", signed=True,
-                  **kwargs):
+    def __init__(self, root, parent_node, mapping, octets, seq_length=1,
+                 byteorder="!", signed=True, **kwargs):
         self.mapping = mapping
-        super().__init__(octets, byteorder, signed, **kwargs)
+        super().__init__(root, parent_node, octets, seq_length, byteorder,
+                         signed, **kwargs)
    
     def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
         raw_data, size, value = self.consume_integer(buffer, buffer_idx)
-        if not self.keep_raw_data:
-            raw_data = None
         meaning = self.mapping.get(value, "unknown")
-        return self(raw_data, size, value, meaning)
-
+        self.node["raw_data"] = raw_data
+        self.node["size"] = size
+        self.node["value"] = value
+        self.node["meaning"] = meaning
+        return self()
 
 
 class HomogenousSequenceStructure(IntegerStructure):
-    def __init__(self, octets_per_item, number_of_items,
-                 byteorder="!", signed=True, **kwargs): 
-        super().__init__(octets_per_item, byteorder, signed, **kwargs)
+    def __init__(self, root, parent_node, octets_per_item, number_of_items,
+                 seq_length=1, byteorder="!", signed=True, **kwargs): 
+        super().__init__(root, parent_node, octets_per_item, seq_length,
+                         byteorder, signed, **kwargs)
         self.number_of_items = number_of_items
 
     def consume_sequence(self, buffer, buffer_idx):
@@ -277,20 +416,22 @@ class HomogenousSequenceStructure(IntegerStructure):
             offset = offset + size
             raw_data.extend(data)
             seq.append(value)
-        if not self.keep_raw_data:
             size = len(raw_data)
-            raw_data = None
         return (raw_data, size, tuple(seq)) 
 
     def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
-       return self(*self.consume_sequence(buffer, buffer_idx))
-
+        raw_data, size, seq = self.consume_sequence(buffer, buffer_idx)
+        self.node["raw_data"] = bytearray(raw_data)
+        self.node["size"] = size
+        self.node["value"] = seq
+        return self()
 
 class ContainerStructure(BaseStructure):
     _fields = ("contents",)
 
-    def __init__(self, content_class, allow_buffer_end=True, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, root, parent_node, content_class,
+                 allow_buffer_end=True, **kwargs):
+        super().__init__(root, parent_node, **kwargs)
         self.content_class = content_class
         self._stop = False
         self.allow_buffer_end = allow_buffer_end
@@ -299,10 +440,16 @@ class ContainerStructure(BaseStructure):
         return self._stop
 
     def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):
-        contents = OrderedDict()
+        self.node.raw_data = None
+        self.node.size = 0
+        self.node["contents"] = StructureNode(self.node, "contents",
+                                              self.__class__.__name__,
+                                              [], [], {})
         offset = 0
+        i = 0
         while not self.should_stop():
-            item = self.content_class(**contents)
+            item = self.content_class(self.root, self.node,
+                                       **self.node.contents.children)
             try:
                 field = item.consume_from_buffer(buffer, buffer_idx + offset,
                                                  **kwargs)
@@ -314,5 +461,7 @@ class ContainerStructure(BaseStructure):
                     raise
             if field:
                 offset = offset + field.size
-                contents.setdefault(field.__class__.__name__, []).append(field)
-        return self(None, offset, contents)
+                self.node.size = self.node.size + field.size
+                self.node["contents"][field.name + "_" + str(i).zfill(5)] = field
+            i = i + 1
+        return self()
