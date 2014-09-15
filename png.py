@@ -454,6 +454,7 @@ class PNGChunkStructure(PayloadStructure):
             data_iterator = chain(self.node.chunk_type.raw_data,
                                   self.node.payload.raw_data)
             crc = ChunkCRCStructure.generate_crc(data_iterator)
+            crc = crc ^ 0xffffffff
             if crc != validation_value.value:
                 return "CRC {} did not match calculated CRC {}".format(
                     validation_value.value, crc
