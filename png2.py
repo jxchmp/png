@@ -1,31 +1,13 @@
 #!/usr/bin/env python3
 
 from node import *
-
-class ChunkTypeNode(StringNode("chunk_type", 4, "latin9",
-                    ["ancillary", "private", "reserved", "safe_to_copy"])):
-    def derive_flag_bit(self, idx):
-        return (ord(self.value[idx]) & 32) > 0
-
-    def derive_ancillary(self):
-        return self.derive_flag_bit(0)
-
-    def derive_private(self):
-        return self.derive_flag_bit(1)
-    
-    def derive_reserved(self):
-        return self.derive_flag_bit(2)
-    
-    def derive_safe_to_copy(self):
-        return self.derive_flag_bit(3)
-
-    def validate_reserved(self):
-        if self.reserved:
-            return "Reserved bit is set."
+from operator import *
 
 
 class ColorTypeNode(IntegerNode("color_type", "!B",
-                    ["palette_used", "color_used", "alpha_used"])):
+                    extra_attributes=["palette_used",
+                                      "color_used",
+                                      "alpha_used"])):
     def derive_palette_used(self):
         return (self.value & 1) > 0
 
@@ -45,7 +27,17 @@ PNGStructure = DefinedChildrenNode("PNG", [
     NodeSequenceNode("chunks",
         DefinedChildrenNode("chunk",
             [IntegerNode("length", "!I"),
-             ChunkTypeNode,
+             StringNode("chunk_type", 4, "latin9",
+                validations={
+                    "reserved": simple_validation("reserved", eq, 0,
+                                                  "Reserved bit is set.")
+                },
+                derivations={
+                    "ancillary": bit_flag("value", 5, 0, ord),
+                    "private": bit_flag("value", 5, 1, ord),
+                    "reserved": bit_flag("value", 5, 2, ord),
+                    "safe_to_copy": bit_flag("value", 5, 3, ord)
+                }),
              DelegatingNode({
                 "default": (IntegerSequenceNode,
                             "unknown_chunk_payload",
@@ -57,7 +49,16 @@ PNGStructure = DefinedChildrenNode("PNG", [
                             [IntegerNode("width", "!I"),
                              IntegerNode("height", "!I"),
                              IntegerNode("bit_depth", "!B"),
-                             ColorTypeNode,
+                             IntegerNode("color_type", "!B",
+                                 validations={
+                                    "value": simple_validation(
+                                        "value", contains, (0,2,3,4,6),
+                                        "Invalid value.")},
+                                 derivations={
+                                    "palette_used": bit_flag("value", 0),
+                                    "color_used": bit_flag("value", 1),
+                                    "alpha_used": bit_flag("value", 2)
+                             }),
                              IntegerNode("compression_method", "!B"),
                              IntegerNode("filter_method", "!B"),
                              IntegerNode("interlace_method", "!B")]

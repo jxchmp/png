@@ -4,11 +4,9 @@ from collections import deque
 from operator import *
 import struct
 import inspect
-import re
 
 class BufferReadError(Exception):
     pass
-
 
 class _Node(object):
     _allowed_attributes = ("warnings")
@@ -47,6 +45,9 @@ class _Node(object):
                 if hasattr(node, attr):
                     val = getattr(node, attr)
                     if val != []:
+                        if isinstance(val, list):
+                            if len(val) > 8:
+                                val = str(val[:8])[:-1] + ", ...]"
                         s.append("{}{} = {}".format(
                         "  " * (depth+1), attr, str(val)))
             for child in reversed(node.children):
@@ -151,25 +152,51 @@ class _Node(object):
             raise BufferReadError
         return data
 
-        
+def _default(arg):
+    if callable(arg):
+        return arg()
+    else:
+        return arg
 
-
-def Node(name, allowed_attributes=None, defaults=None, clsattrs=None):
-    if allowed_attributes is None:
-        allowed_attributes = []
+def Node(name, allowed_attributes=list, defaults=dict, clsattrs=dict,
+         validations=dict, derivations=dict):
     _allowed_attributes = [_Node._allowed_attributes]
-    _allowed_attributes.extend(allowed_attributes)
-    if defaults is None:
-        defaults = {}
+    _allowed_attributes.extend(_default(allowed_attributes))
+    defaults = _default(defaults)
     defaults.update(_Node._attribute_defaults)
-    if clsattrs is None:
-        clsattrs = {}
+    derivations = _default(derivations)
+    _allowed_attributes.extend(list(derivations.keys()))
+    clsattrs = _default(clsattrs)
     clsattrs["_allowed_attributes"] = tuple(_allowed_attributes)
     clsattrs["_attribute_defaults"] = defaults
+    for name, method in _default(validations).items():
+        clsattrs["validate_" + name] = method
+    for name, method in derivations.items():
+        clsattrs["derive_" + name] = method
     return type(name, (_Node,), clsattrs)
 
+def simple_validation(name, op, value, warning):
+    def _(self):
+        if op == contains:
+            res = not op(value, getattr(self, name))
+        else:
+            res = not op(getattr(self, name), value)
+        if res:
+            return warning
+    return _
 
-def StaticNode(name, staticbytes, extra_attributes=None):
+def bit_flag(attr, bit, idx=None, transform=None):
+    def _(self):
+        val = getattr(self, attr)
+        if idx is not None:
+            val = val[idx]
+        if transform:
+            val = transform(val)
+        return val & (2**bit) > 0
+    return _
+    
+
+def StaticNode(name, staticbytes, extra_attributes=list):
     def from_buffer(cls, buff, parent):
         for val in cls._staticbytes:
             buffval = cls.consume_byte(buff)
@@ -187,36 +214,45 @@ def StaticNode(name, staticbytes, extra_attributes=None):
             "from_buffer": classmethod(from_buffer)
         })
    
-def DefinedChildrenNode(name, substructures, extra_attributes=None):
+def DefinedChildrenNode(name, substructures, **kwargs):
     def from_buffer(cls, buff, parent):
         node = cls(parent)
         for substructure in cls._substructures:
             node.children.append(substructure.from_buffer(buff, node))
         return node
     return Node(name,
-        allowed_attributes = extra_attributes,
         clsattrs={
             "_substructures": substructures,
             "from_buffer": classmethod(from_buffer)
-        })
+        },
+        **kwargs)
 
-def IntegerNode(name, structformat, extra_attributes=None):
+
+def _ValueNode(name, from_buffer, extra_attributes=list, extra_clsattrs=dict,
+                **kwargs):
+    allowed_attributes = ["value"]
+    allowed_attributes.extend(_default(extra_attributes))
+    clsattrs = {
+        "from_buffer": classmethod(from_buffer)
+    }
+    clsattrs.update(_default(extra_clsattrs))
+    return Node(name,
+                allowed_attributes = allowed_attributes,
+                clsattrs = clsattrs,
+                **kwargs)
+                
+
+def IntegerNode(name, structformat, **kwargs):
     def from_buffer(cls, buff, parent):
         size = struct.calcsize(cls._structformat)
         value = struct.unpack(cls._structformat, cls.consume_bytes(buff, size))[0]
         return cls(parent, value=value)
-    allowed_attributes = ["value"]
-    if extra_attributes:
-        allowed_attributes.extend(extra_attributes)
-    return Node(name,
-        allowed_attributes = allowed_attributes,
-        clsattrs={
-            "_structformat": structformat,
-            "from_buffer": classmethod(from_buffer)
-        })
+    return _ValueNode(name, from_buffer,
+                     extra_clsattrs={"_structformat": structformat},
+                     **kwargs)
 
-def IntegerSequenceNode(name, structformat, items, subseq_length=1,
-                        extra_attributes=None):
+
+def IntegerSequenceNode(name, structformat, items, subseq_length=1, **kwargs):
     def from_buffer(cls, buff, parent):
         size = struct.calcsize(cls._structformat)
         seq = []
@@ -230,32 +266,20 @@ def IntegerSequenceNode(name, structformat, items, subseq_length=1,
             else:
                 seq.append(thisseq)
         return cls(parent, value=seq)
-    allowed_attributes = ["value"]
-    if extra_attributes:
-        allowed_attributes.extend(extra_attributes)
-    return Node(name,
-        allowed_attributes = allowed_attributes,
-        clsattrs={
-            "_structformat": structformat,
-            "from_buffer": classmethod(from_buffer)
-        })
+    return _ValueNode(name, from_buffer,
+                      extra_clsattrs={"_structformat": structformat},
+                      **kwargs)
 
-def StringNode(name, length, encoding='utf8', extra_attributes=None):
+def StringNode(name, length, encoding='utf8', **kwargs):
     def from_buffer(cls, buff, parent):
         bytestring = cls.consume_bytes(buff, length)
         if len(bytestring) != length:
             raise BufferReadError
         return cls(parent, value=bytestring.decode(encoding))
-    allowed_attributes = ["value"]
-    if extra_attributes:
-        allowed_attributes.extend(extra_attributes)
-    return Node(name,
-        allowed_attributes = allowed_attributes,
-        clsattrs={
-            "from_buffer": classmethod(from_buffer)
-        })
+    return _ValueNode(name, from_buffer, **kwargs)
 
-def NullTerminatedStringNode(name, encoding='utf8', extra_attributes=None):
+
+def NullTerminatedStringNode(name, encoding='utf8', **kwargs):
     def from_buffer(cls, buff, parent):
         bytestring = bytearray()
         while True:
@@ -265,14 +289,7 @@ def NullTerminatedStringNode(name, encoding='utf8', extra_attributes=None):
             else:
                 bytestring.append(byte)
         return cls(parent, value=bytestring.decode(encoding))
-    allowed_attributes = ["value"]
-    if extra_attributes:
-        allowed_attributes.extend(extra_attributes)
-    return Node(name,
-        allowed_attributes = allowed_attributes,
-        clsattrs={
-            "from_buffer": classmethod(from_buffer)
-        })
+    return _ValueNode(name, from_buffer, **kwargs)
 
 
 def NodeSequenceNode(name, childclass, items=None, stop=None,
