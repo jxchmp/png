@@ -4,9 +4,48 @@ from collections import deque
 from operator import *
 import struct
 import inspect
+import re
 
 class BufferReadError(Exception):
     pass
+
+class Path(object):
+    number = re.compile(r"^-?\d+$")
+    name = re.compile(r"^[_a-zA-Z][_a-zA-Z0-9]*$")
+    def __init__(self, path):
+        self.path = path.split("/")
+
+    def __call__(self, node):
+        curnode = node
+        for nav in self.path:
+            if nav == "..":
+                curnode = curnode.parent
+            elif nav == ".":
+                curnode = curnode
+            elif self.number.match(nav):
+                curnode = curnode.children[int(nav)]
+            elif self.name.match(nav):
+                curnode = getattr(curnode, nav)
+        return curnode
+
+def evaluate_paths(f):
+    @classmethod
+    def _f(cls, parent, *args, **kwargs):
+        _args = []
+        for arg in args:
+            if isinstance(arg, Path):
+                _args.append(arg(parent))
+            else:
+                _args.append(arg)
+        _kwargs = {} 
+        for key, val in kwargs.items():
+            if isinstance(val, Path):
+                _kwargs[key] = val(parent)
+            else:
+                _kwargs[key] = val
+        return f(cls, parent, *_args, **_kwargs)
+    return _f
+    
 
 class _Node(object):
     _allowed_attributes = ("warnings")
@@ -80,7 +119,10 @@ class _Node(object):
             if hasattr(self, method):
                 warning = getattr(self, method)()
                 if warning:
-                    self.warnings.append(warning)
+                    if isinstance(warning, (list, tuple)):
+                        self.warnings.extend(warning)
+                    else:
+                        self.warnings.append(warning)
 
     def _derive(self, attributes):
         methods = [("derive_" + attr, attr) for attr in attributes]
@@ -169,10 +211,10 @@ def Node(name, allowed_attributes=list, defaults=dict, clsattrs=dict,
     clsattrs = _default(clsattrs)
     clsattrs["_allowed_attributes"] = tuple(_allowed_attributes)
     clsattrs["_attribute_defaults"] = defaults
-    for name, method in _default(validations).items():
-        clsattrs["validate_" + name] = method
-    for name, method in derivations.items():
-        clsattrs["derive_" + name] = method
+    for validation_name, method in _default(validations).items():
+        clsattrs["validate_" + validation_name] = method
+    for derivation_name, method in derivations.items():
+        clsattrs["derive_" + derivation_name] = method
     return type(name, (_Node,), clsattrs)
 
 def simple_validation(name, op, value, warning):
@@ -185,6 +227,12 @@ def simple_validation(name, op, value, warning):
             return warning
     return _
 
+def compound_validation(validations):
+    def _(self):
+        return [w for w in [v(self) for v in validations] if w]
+    return _
+        
+
 def bit_flag(attr, bit, idx=None, transform=None):
     def _(self):
         val = getattr(self, attr)
@@ -195,8 +243,13 @@ def bit_flag(attr, bit, idx=None, transform=None):
         return val & (2**bit) > 0
     return _
     
+def lookup(attr, d, default="unknown"):
+    def _(self):
+        return d.get(getattr(self, attr), default)
+    return _
 
 def StaticNode(name, staticbytes, extra_attributes=list):
+    @evaluate_paths
     def from_buffer(cls, buff, parent):
         for val in cls._staticbytes:
             buffval = cls.consume_byte(buff)
@@ -211,10 +264,11 @@ def StaticNode(name, staticbytes, extra_attributes=list):
         allowed_attributes = extra_attributes,
         clsattrs={
             "_staticbytes": staticbytes,
-            "from_buffer": classmethod(from_buffer)
+            "from_buffer": from_buffer
         })
    
 def DefinedChildrenNode(name, substructures, **kwargs):
+    @evaluate_paths
     def from_buffer(cls, buff, parent):
         node = cls(parent)
         for substructure in cls._substructures:
@@ -223,7 +277,7 @@ def DefinedChildrenNode(name, substructures, **kwargs):
     return Node(name,
         clsattrs={
             "_substructures": substructures,
-            "from_buffer": classmethod(from_buffer)
+            "from_buffer": from_buffer
         },
         **kwargs)
 
@@ -233,7 +287,7 @@ def _ValueNode(name, from_buffer, extra_attributes=list, extra_clsattrs=dict,
     allowed_attributes = ["value"]
     allowed_attributes.extend(_default(extra_attributes))
     clsattrs = {
-        "from_buffer": classmethod(from_buffer)
+        "from_buffer": evaluate_paths(from_buffer)
     }
     clsattrs.update(_default(extra_clsattrs))
     return Node(name,
@@ -294,6 +348,7 @@ def NullTerminatedStringNode(name, encoding='utf8', **kwargs):
 
 def NodeSequenceNode(name, childclass, items=None, stop=None,
                      extra_attributes=None):
+    @evaluate_paths
     def from_buffer(cls, buff, parent):
         node = cls(parent)
         if cls._items is None:
@@ -318,34 +373,43 @@ def NodeSequenceNode(name, childclass, items=None, stop=None,
     return Node(name, clsattrs={
         "_childclass": childclass,
         "_items": items,
-        "from_buffer": classmethod(from_buffer)
+        "from_buffer": from_buffer
         })
 
 
 def DelegatingNode(classdict, keyfunc):
+    @evaluate_paths
     def from_buffer(cls, buff, parent):
         key = keyfunc(parent)
         vals = cls._classdict.get(key)
         if vals is None:
             vals = cls._classdict.get("default")
-        nodecls, name, args, kwargs = vals
-        args2 = []
-        kwargs2 = {}
-        for arg in args:
-            if callable(arg):
-                args2.append(arg(parent))
-            else:
-                args2.append(arg)
-        for kwarg in kwargs:
-            if callable(kwargs):
-                kwargs2.append(arg(parent))
-            else:
-                kwargs2.append(arg)
-        return nodecls(name, *args2, **kwargs2).from_buffer(buff, parent)
+        if isinstance(vals, type):
+            return vals
+        else:
+            vals = list(vals)
+            if len(vals) == 2:
+                vals.append([]),
+            if len(vals) == 3:
+                vals.append({})
+            nodecls, name, args, kwargs = vals
+            args2 = []
+            kwargs2 = {}
+            for arg in args:
+                if callable(arg):
+                    args2.append(arg(parent))
+                else:
+                    args2.append(arg)
+            for kwarg in kwargs:
+                if callable(kwargs):
+                    kwargs2.append(arg(parent))
+                else:
+                    kwargs2.append(arg)
+            return nodecls(name, *args2, **kwargs2).from_buffer(buff, parent)
     return type("delegating_node", (object,),
         {
             "_classdict": classdict,
-            "from_buffer": classmethod(from_buffer)
+            "from_buffer": from_buffer
         })
 
 
