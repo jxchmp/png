@@ -6,18 +6,44 @@ import struct
 import inspect
 import re
 
+
+def is_in(a,b):
+    return a in b
+
+def between(a,b):
+    low, high = b
+    return low <= a <= high
+
+op_names = {
+    lt: "<",
+    le: "<=",
+    eq: "==",
+    ne: "!=",
+    ge: ">=",
+    gt: ">",
+    not_: "not",
+    truth: "true",
+    contains: "be contained in",
+    is_in: "in",
+    between: "between"
+}
+
 class BufferReadError(Exception):
     pass
 
 class Path(object):
     number = re.compile(r"^-?\d+$")
     name = re.compile(r"^[_a-zA-Z][_a-zA-Z0-9]*$")
-    def __init__(self, path):
+    def __init__(self, path, transform=None):
         self.path = path.split("/")
+        self.transform = transform
 
     def __call__(self, node):
+        print("path", node)
         curnode = node
         for nav in self.path:
+            print(nav, curnode.__class__.__name__,
+                  [n.__class__.__name__ for n in curnode.children])
             if nav == "..":
                 curnode = curnode.parent
             elif nav == ".":
@@ -26,26 +52,11 @@ class Path(object):
                 curnode = curnode.children[int(nav)]
             elif self.name.match(nav):
                 curnode = getattr(curnode, nav)
-        return curnode
-
-def evaluate_paths(f):
-    @classmethod
-    def _f(cls, parent, *args, **kwargs):
-        _args = []
-        for arg in args:
-            if isinstance(arg, Path):
-                _args.append(arg(parent))
-            else:
-                _args.append(arg)
-        _kwargs = {} 
-        for key, val in kwargs.items():
-            if isinstance(val, Path):
-                _kwargs[key] = val(parent)
-            else:
-                _kwargs[key] = val
-        return f(cls, parent, *_args, **_kwargs)
-    return _f
-    
+        print("result", curnode)
+        if self.transform:
+            return self.transform(curnode, node)
+        else:
+            return curnode
 
 class _Node(object):
     _allowed_attributes = ("warnings")
@@ -87,6 +98,11 @@ class _Node(object):
                         if isinstance(val, list):
                             if len(val) > 8:
                                 val = str(val[:8])[:-1] + ", ...]"
+                        elif isinstance(val, bytes):
+                            if len(val) > 8:
+                                val = bytearray(val)[:8]
+                                val.extend(b'...')
+                                val = bytes(val)
                         s.append("{}{} = {}".format(
                         "  " * (depth+1), attr, str(val)))
             for child in reversed(node.children):
@@ -217,14 +233,15 @@ def Node(name, allowed_attributes=list, defaults=dict, clsattrs=dict,
         clsattrs["derive_" + derivation_name] = method
     return type(name, (_Node,), clsattrs)
 
-def simple_validation(name, op, value, warning):
+def simple_validation(name, op, value):
     def _(self):
         if op == contains:
             res = not op(value, getattr(self, name))
         else:
             res = not op(getattr(self, name), value)
         if res:
-            return warning
+            return "Failed validation: {} {} {}".format(
+                name, op_names[op], value)
     return _
 
 def compound_validation(validations):
@@ -249,7 +266,7 @@ def lookup(attr, d, default="unknown"):
     return _
 
 def StaticNode(name, staticbytes, extra_attributes=list):
-    @evaluate_paths
+    @classmethod
     def from_buffer(cls, buff, parent):
         for val in cls._staticbytes:
             buffval = cls.consume_byte(buff)
@@ -268,7 +285,7 @@ def StaticNode(name, staticbytes, extra_attributes=list):
         })
    
 def DefinedChildrenNode(name, substructures, **kwargs):
-    @evaluate_paths
+    @classmethod
     def from_buffer(cls, buff, parent):
         node = cls(parent)
         for substructure in cls._substructures:
@@ -287,7 +304,7 @@ def _ValueNode(name, from_buffer, extra_attributes=list, extra_clsattrs=dict,
     allowed_attributes = ["value"]
     allowed_attributes.extend(_default(extra_attributes))
     clsattrs = {
-        "from_buffer": evaluate_paths(from_buffer)
+        "from_buffer": classmethod(from_buffer)
     }
     clsattrs.update(_default(extra_clsattrs))
     return Node(name,
@@ -307,7 +324,10 @@ def IntegerNode(name, structformat, **kwargs):
 
 
 def IntegerSequenceNode(name, structformat, items, subseq_length=1, **kwargs):
+    outer = locals()
     def from_buffer(cls, buff, parent):
+        if isinstance(outer["items"], Path):
+            items = outer["items"](parent)
         size = struct.calcsize(cls._structformat)
         seq = []
         for i in range(items):
@@ -324,8 +344,25 @@ def IntegerSequenceNode(name, structformat, items, subseq_length=1, **kwargs):
                       extra_clsattrs={"_structformat": structformat},
                       **kwargs)
 
-def StringNode(name, length, encoding='utf8', **kwargs):
+def BytestringNode(name, length, **kwargs):
+    outer = locals()
     def from_buffer(cls, buff, parent):
+        if isinstance(outer["length"], Path):
+            length = outer["length"](parent)
+        bytestring = cls.consume_bytes(buff, length)
+        if len(bytestring) != length:
+            raise BufferReadError
+        return cls(parent, value=bytestring)
+    return _ValueNode(name, from_buffer, **kwargs)
+
+
+def StringNode(name, length, encoding='utf8', **kwargs):
+    outer = locals()
+    def from_buffer(cls, buff, parent):
+        if isinstance(outer["length"], Path):
+            length = outer["length"](parent)
+        else:
+            length = outer["length"]
         bytestring = cls.consume_bytes(buff, length)
         if len(bytestring) != length:
             raise BufferReadError
@@ -337,7 +374,7 @@ def NullTerminatedStringNode(name, encoding='utf8', **kwargs):
     def from_buffer(cls, buff, parent):
         bytestring = bytearray()
         while True:
-            byte = self.consume_byte(1)
+            byte = cls.consume_byte(buff)
             if byte == 0:
                 break
             else:
@@ -348,7 +385,7 @@ def NullTerminatedStringNode(name, encoding='utf8', **kwargs):
 
 def NodeSequenceNode(name, childclass, items=None, stop=None,
                      extra_attributes=None):
-    @evaluate_paths
+    @classmethod
     def from_buffer(cls, buff, parent):
         node = cls(parent)
         if cls._items is None:
@@ -378,14 +415,14 @@ def NodeSequenceNode(name, childclass, items=None, stop=None,
 
 
 def DelegatingNode(classdict, keyfunc):
-    @evaluate_paths
+    @classmethod
     def from_buffer(cls, buff, parent):
         key = keyfunc(parent)
         vals = cls._classdict.get(key)
         if vals is None:
             vals = cls._classdict.get("default")
         if isinstance(vals, type):
-            return vals
+            return vals.from_buffer(buff, parent)
         else:
             vals = list(vals)
             if len(vals) == 2:
