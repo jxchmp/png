@@ -86,7 +86,7 @@ PNGStructure = DefinedChildrenNode("PNG", [
                     )
                 ]),
                 "PLTE": IntegerSequenceNode("PLTE_chunk_payload",
-                    "!B", Path("./0/value", lambda val, n: val/3), 3),
+                    "!B", Path("./0/value", lambda val, n: val//3), 3),
                 "IDAT": BytestringNode("IDAT_chunk_payload",
                     Path("./0/value")),
                 "IEND": StaticNode("IEND_chunk_payload", b""),
@@ -152,7 +152,16 @@ PNGStructure = DefinedChildrenNode("PNG", [
                             "value": simple_validation(
                                 "value", between, (0,60))
                         })
-                ])
+                ]),
+                "tRNS": IntegerSequenceNode("tRNS_chunk_payload",
+                     Path("../0/2/3/value",
+                        lambda v, n: {2: "!H", 3: "!B", 0: "!H"}[v]),
+                     Path("../0/2/3/value",
+                        lambda v, n: {2: 1,
+                                      3: n.children[0].value,
+                                      0: n.children[0].value//2}[v]),
+                     Path("../0/2/3/value",
+                        lambda v, n: {2: 3, 3: 1, 0: 1}[v]))
             },
             Path("./1/value")
         ),
@@ -167,5 +176,18 @@ def test():
         png = PNGStructure.from_buffer(f, None)
         print(png.tree_string())
 
+def test2():
+    import os
+    d = "/home/james/Documents/current_projects/png/test" 
+    for fn in sorted(os.listdir(d)):
+        if fn.endswith(".png"):
+            with open(os.path.join(d, fn), "rb") as f:
+                try:
+                    png = PNGStructure.from_buffer(f, None)
+                    #print(png.tree_string())
+                except BufferReadError:
+                   print("Error reading " + fn)
+
+
 if __name__ == "__main__":
-    test()
+    test2()

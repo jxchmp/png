@@ -8,12 +8,27 @@ import re
 
 
 def is_in(a,b):
+    """
+    Another operator for more sensible semantics than __contains__ (i.e. in
+    terms of validation, it makes more sense to say value is in
+    a list of acceptable values).
+    """
     return a in b
 
 def between(a,b):
+    """
+    An additional operator to allow the common case of a value being valid
+    when in a given range of values, rather than having to chain a less
+    than and greater than check together. The range given is inclusive of
+    the high and low values.
+    """
     low, high = b
     return low <= a <= high
 
+"""
+Mapping of useful operator functions to string values for use in
+automatic generation of warnings on validation errors.
+"""
 op_names = {
     lt: "<",
     le: "<=",
@@ -35,24 +50,23 @@ class Path(object):
     number = re.compile(r"^-?\d+$")
     name = re.compile(r"^[_a-zA-Z][_a-zA-Z0-9]*$")
     def __init__(self, path, transform=None):
-        self.path = path.split("/")
+        self.path = path.replace("//", "#/").split("/")
+        self.path = [el.replace("#", "//") for el in self.path]
         self.transform = transform
 
     def __call__(self, node):
-        print("path", node)
         curnode = node
         for nav in self.path:
-            print(nav, curnode.__class__.__name__,
-                  [n.__class__.__name__ for n in curnode.children])
             if nav == "..":
                 curnode = curnode.parent
             elif nav == ".":
                 curnode = curnode
+            elif nav == "//":
+                curnode = curnode.root
             elif self.number.match(nav):
                 curnode = curnode.children[int(nav)]
             elif self.name.match(nav):
                 curnode = getattr(curnode, nav)
-        print("result", curnode)
         if self.transform:
             return self.transform(curnode, node)
         else:
@@ -326,15 +340,25 @@ def IntegerNode(name, structformat, **kwargs):
 def IntegerSequenceNode(name, structformat, items, subseq_length=1, **kwargs):
     outer = locals()
     def from_buffer(cls, buff, parent):
+        if isinstance(cls._structformat, Path):
+            _structformat = cls._structformat(parent)
+        else:
+            _structformat = cls._structformat
         if isinstance(outer["items"], Path):
             items = outer["items"](parent)
-        size = struct.calcsize(cls._structformat)
+        else:
+            items = outer["items"]
+        if isinstance(outer["subseq_length"], Path):
+            subseq_length = outer["subseq_length"](parent)
+        else:
+            subseq_length = outer["subseq_length"]
+        size = struct.calcsize(_structformat)
         seq = []
         for i in range(items):
             thisseq = []
             for j in range(subseq_length):
                 val = cls.consume_bytes(buff, size)
-                thisseq.append(struct.unpack(cls._structformat, val)[0])
+                thisseq.append(struct.unpack(_structformat, val)[0])
             if len(thisseq) == 1:
                 seq.append(thisseq[0])
             else:
