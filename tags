@@ -1,0 +1,366 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+BaseStructure	old/structures.py	/^class BaseStructure(object, metaclass=MetaStructure):$/;"	c
+BufferReadError	old/node.py	/^class BufferReadError(Exception):$/;"	c
+BufferReadError	old/node2.py	/^class BufferReadError(Exception):$/;"	c
+BytestringNode	old/node.py	/^def BytestringNode(name, length, **kwargs):$/;"	f
+BytestringNode	old/node2.py	/^def BytestringNode(name, length, **kwargs):$/;"	f
+ChunkCRCStructure	old/png.py	/^class ChunkCRCStructure(IntegerStructure):$/;"	c
+ChunkPayloadStructure	old/png.py	/^class ChunkPayloadStructure(object):$/;"	c
+ChunkTypeStructure	old/png.py	/^class ChunkTypeStructure(HomogenousSequenceStructure):$/;"	c
+CodedIntegerStructure	old/structures.py	/^class CodedIntegerStructure(IntegerStructure):$/;"	c
+ColorTypeStructure	old/png.py	/^class ColorTypeStructure(IntegerStructure):$/;"	c
+ContainerStructure	old/structures.py	/^class ContainerStructure(BaseStructure):$/;"	c
+DefinedChildrenNode	old/node.py	/^def DefinedChildrenNode(name, substructures, **kwargs):$/;"	f
+DefinedChildrenNode	old/node2.py	/^def DefinedChildrenNode(name, substructures, **kwargs):$/;"	f
+DelegatingNode	old/node.py	/^def DelegatingNode(classdict, keyfunc, **kwargs):$/;"	f
+DelegatingNode	old/node2.py	/^def DelegatingNode(classdict, keyfunc, **kwargs):$/;"	f
+DerivedStructure	old/structures.py	/^class DerivedStructure(BaseStructure):$/;"	c
+EndOfBufferError	old/structures.py	/^class EndOfBufferError(StructureReadError):$/;"	c
+HomogenousSequenceStructure	old/structures.py	/^class HomogenousSequenceStructure(IntegerStructure):$/;"	c
+IDATPayloadStructure	old/png.py	/^class IDATPayloadStructure(HomogenousSequenceStructure):$/;"	c
+IENDPayloadStructure	old/png.py	/^class IENDPayloadStructure(StaticStructure):$/;"	c
+IHDRPayloadStructure	old/png.py	/^class IHDRPayloadStructure(PayloadStructure):$/;"	c
+IntegerNode	old/node.py	/^def IntegerNode(name, structformat, **kwargs):$/;"	f
+IntegerNode	old/node2.py	/^def IntegerNode(name, structformat, **kwargs):$/;"	f
+IntegerSequenceNode	old/node.py	/^def IntegerSequenceNode(name, structformat, items, subseq_length=1, **kwargs):$/;"	f
+IntegerSequenceNode	old/node2.py	/^def IntegerSequenceNode(name, structformat, items, subseq_length=1, **kwargs):$/;"	f
+IntegerStructure	old/structures.py	/^class IntegerStructure(BaseStructure):$/;"	c
+InvalidValueError	old/structures.py	/^class InvalidValueError(StructureReadError):$/;"	c
+MetaStructure	old/structures.py	/^class MetaStructure(type):$/;"	c
+Node	node.py	/^class Node(object):$/;"	c
+Node	old/node.py	/^def Node(name, allowed_attributes=list, defaults=dict, clsattrs=dict,$/;"	f
+Node	old/node2.py	/^def Node(name, allowed_attributes=list, defaults=dict, clsattrs=dict,$/;"	f
+NodeSequenceNode	old/node.py	/^def NodeSequenceNode(name, childclass, items=None, stop=None,$/;"	f
+NodeSequenceNode	old/node2.py	/^def NodeSequenceNode(name, childclass, items=None, stop=None,$/;"	f
+NullTerminatedStringNode	old/node.py	/^def NullTerminatedStringNode(name, encoding='utf8', **kwargs):$/;"	f
+NullTerminatedStringNode	old/node2.py	/^def NullTerminatedStringNode(name, encoding='utf8', **kwargs):$/;"	f
+PLTEPayloadStructure	old/png.py	/^class PLTEPayloadStructure(HomogenousSequenceStructure):$/;"	c
+PNGChunkStructure	old/png.py	/^class PNGChunkStructure(PayloadStructure):$/;"	c
+PNGFileSignatureStructure	old/png.py	/^class PNGFileSignatureStructure(StaticStructure):$/;"	c
+PNGRoot	old/png.py	/^class PNGRoot(RootStructure):$/;"	c
+PNGStructure	old/png.py	/^class PNGStructure(PayloadStructure):$/;"	c
+PNGStructure	old/png2.py	/^PNGStructure = DefinedChildrenNode("PNG", [$/;"	v
+Path	old/node.py	/^class Path(object):$/;"	c
+Path	old/node2.py	/^class Path(object):$/;"	c
+Path	path.py	/^class Path(object):$/;"	c
+PathNode	path.py	/^class PathNode(object):$/;"	c
+PathParseError	path.py	/^class PathParseError(Exception):$/;"	c
+PayloadStructure	old/structures.py	/^class PayloadStructure(BaseStructure):$/;"	c
+RootStructure	old/structures.py	/^class RootStructure(object):$/;"	c
+StaticNode	old/node.py	/^def StaticNode(name, staticbytes, extra_attributes=list):$/;"	f
+StaticNode	old/node2.py	/^def StaticNode(name, staticbytes, extra_attributes=list):$/;"	f
+StaticStructure	old/structures.py	/^class StaticStructure(BaseStructure):$/;"	c
+StringNode	old/node.py	/^def StringNode(name, length, encoding='utf8', **kwargs):$/;"	f
+StringNode	old/node2.py	/^def StringNode(name, length, encoding='utf8', **kwargs):$/;"	f
+StructureNode	old/structures.py	/^class StructureNode(object):$/;"	c
+StructureReadError	old/structures.py	/^class StructureReadError(Exception):$/;"	c
+TerminalNode	path.py	/^class TerminalNode(PathNode):$/;"	c
+TestNode	path.py	/^class TestNode(PathNode):$/;"	c
+TestNode2	path.py	/^class TestNode2(TerminalNode):$/;"	c
+UnexpectedValueError	old/structures.py	/^class UnexpectedValueError(StructureReadError):$/;"	c
+UnknownChunkPayloadStructure	old/png.py	/^class UnknownChunkPayloadStructure(HomogenousSequenceStructure):$/;"	c
+UnknownValueError	old/structures.py	/^class UnknownValueError(StructureReadError):$/;"	c
+_	old/node.py	/^    def _(self):$/;"	f	function:simple_validation
+_	old/node.py	/^    def _(self, *args):$/;"	f	function:bit_flag
+_	old/node.py	/^    def _(self, *args):$/;"	f	function:lookup
+_	old/node2.py	/^    def _(self):$/;"	f	function:simple_validation
+_	old/node2.py	/^    def _(self, *args):$/;"	f	function:bit_flag
+_	old/node2.py	/^    def _(self, *args):$/;"	f	function:lookup
+_Node	old/node.py	/^class _Node(object):$/;"	c
+_Node	old/node2.py	/^class _Node(object):$/;"	c
+_ValueNode	old/node.py	/^def _ValueNode(name, from_buffer, extra_attributes=list, extra_clsattrs=dict,$/;"	f
+_ValueNode	old/node2.py	/^def _ValueNode(name, from_buffer, extra_attributes=list, extra_clsattrs=dict,$/;"	f
+__call__	old/node.py	/^    def __call__(self, node, first=True):$/;"	m	class:Path	file:
+__call__	old/node2.py	/^    def __call__(self, node, first=True):$/;"	m	class:Path	file:
+__call__	old/structures.py	/^    def __call__(self):$/;"	m	class:BaseStructure	file:
+__getattr__	old/structures.py	/^    def __getattr__(self, name):$/;"	m	class:StructureNode	file:
+__getitem__	old/structures.py	/^    def __getitem__(self, key):$/;"	m	class:StructureNode	file:
+__init__	node.py	/^    def __init__(self, parent):$/;"	m	class:Node
+__init__	old/node.py	/^    def __init__(self, parent, noprocess=False, **kwargs):$/;"	m	class:_Node
+__init__	old/node.py	/^    def __init__(self, path, transform=None):$/;"	m	class:Path
+__init__	old/node2.py	/^    def __init__(self, parent, noprocess=False, **kwargs):$/;"	m	class:_Node
+__init__	old/node2.py	/^    def __init__(self, path, transform=None):$/;"	m	class:Path
+__init__	old/png.py	/^    def __init__(self):$/;"	m	class:PNGStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node):$/;"	m	class:PNGFileSignatureStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node,  size, **kwargs):$/;"	m	class:PLTEPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, **kwargs):$/;"	m	class:ChunkTypeStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, **kwargs):$/;"	m	class:PNGChunkStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:IDATPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:IENDPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:IHDRPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:UnknownChunkPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:bKGDPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:cHRMPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:gAMAPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:hISTPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:pHYsPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:sBITPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:tEXtPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:tIMEPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:tRNSPayloadStructure
+__init__	old/png.py	/^    def __init__(self, root, parent_node, size, **kwargs):$/;"	m	class:zTXtPayloadStructure
+__init__	old/structures.py	/^    def __init__(self):$/;"	m	class:RootStructure
+__init__	old/structures.py	/^    def __init__(self, name, index):$/;"	m	class:EndOfBufferError
+__init__	old/structures.py	/^    def __init__(self, name, index, expected, actual):$/;"	m	class:UnexpectedValueError
+__init__	old/structures.py	/^    def __init__(self, name, index, message):$/;"	m	class:StructureReadError
+__init__	old/structures.py	/^    def __init__(self, name, index, value):$/;"	m	class:UnknownValueError
+__init__	old/structures.py	/^    def __init__(self, name, index, value, reason):$/;"	m	class:InvalidValueError
+__init__	old/structures.py	/^    def __init__(self, parent, name, clsname, fields, defaults, data):$/;"	m	class:StructureNode
+__init__	old/structures.py	/^    def __init__(self, root, parent_node,  staticdata, **kwargs):$/;"	m	class:StaticStructure
+__init__	old/structures.py	/^    def __init__(self, root, parent_node, content_class,$/;"	m	class:ContainerStructure
+__init__	old/structures.py	/^    def __init__(self, root, parent_node, derivation_function, **kwargs):$/;"	m	class:DerivedStructure
+__init__	old/structures.py	/^    def __init__(self, root, parent_node, keep_raw_data=True, **kwargs):$/;"	m	class:BaseStructure
+__init__	old/structures.py	/^    def __init__(self, root, parent_node, mapping, octets, seq_length=1,$/;"	m	class:CodedIntegerStructure
+__init__	old/structures.py	/^    def __init__(self, root, parent_node, octets, seq_length=1, byteorder="!",$/;"	m	class:IntegerStructure
+__init__	old/structures.py	/^    def __init__(self, root, parent_node, octets_per_item, number_of_items,$/;"	m	class:HomogenousSequenceStructure
+__init__	old/structures.py	/^    def __init__(self, root, parent_node, substructures, **kwargs):$/;"	m	class:PayloadStructure
+__init__	path.py	/^    def __init__(self, message, path, subpaths):$/;"	m	class:PathParseError
+__init__	path.py	/^    def __init__(self, parent=None, value=None):$/;"	m	class:PathNode
+__init__	path.py	/^    def __init__(self, parent=None, value=None):$/;"	m	class:TerminalNode
+__init__	path.py	/^    def __init__(self, path):$/;"	m	class:Path
+__iter__	old/structures.py	/^    def __iter__(self):$/;"	m	class:StructureNode	file:
+__iter__	path.py	/^    def __iter__(self):$/;"	m	class:PathNode	file:
+__new__	old/png.py	/^    def __new__(cls, root, d):$/;"	m	class:ChunkPayloadStructure	file:
+__new__	old/structures.py	/^    def __new__(meta, name, bases, attrs):$/;"	m	class:MetaStructure	file:
+__reversed__	old/structures.py	/^    def __reversed__(self):$/;"	m	class:StructureNode	file:
+__setitem__	old/structures.py	/^    def __setitem__(self, key, value):$/;"	m	class:StructureNode	file:
+__str__	old/node.py	/^    def __str__(self):$/;"	m	class:_Node	file:
+__str__	old/node2.py	/^    def __str__(self):$/;"	m	class:_Node	file:
+__str__	old/structures.py	/^    def __str__(self):$/;"	m	class:StructureNode	file:
+__str__	old/structures.py	/^    def __str__(self):$/;"	m	class:StructureReadError	file:
+__str__	path.py	/^    def __str__(self):$/;"	m	class:Path	file:
+__str__	path.py	/^    def __str__(self):$/;"	m	class:PathNode	file:
+__str__	path.py	/^    def __str__(self):$/;"	m	class:TerminalNode	file:
+_allowed_attributes	old/node.py	/^    _allowed_attributes = ("warnings")$/;"	v	class:_Node
+_allowed_attributes	old/node2.py	/^    _allowed_attributes = ("warnings")$/;"	v	class:_Node
+_attribute_defaults	old/node.py	/^    _attribute_defaults = {"warnings": list}$/;"	v	class:_Node
+_attribute_defaults	old/node2.py	/^    _attribute_defaults = {"warnings": list}$/;"	v	class:_Node
+_default	old/node.py	/^def _default(arg):$/;"	f
+_default	old/node2.py	/^def _default(arg):$/;"	f
+_defaults	old/structures.py	/^    _defaults = {"warnings": list}$/;"	v	class:BaseStructure
+_derive	old/node.py	/^    def _derive(self, attributes):$/;"	m	class:_Node
+_derive	old/node2.py	/^    def _derive(self, attributes):$/;"	m	class:_Node
+_fields	old/png.py	/^    _fields = ("palette_used", "color_used", "alpha_channel_used")$/;"	v	class:ColorTypeStructure
+_fields	old/png.py	/^    _fields = ("string_rep", "ancillary", "private", "reserved",$/;"	v	class:ChunkTypeStructure
+_fields	old/png.py	/^    _fields = ('gamma')$/;"	v	class:gAMAPayloadStructure
+_fields	old/png.py	/^    _fields = ('keyword', 'compression_method', 'compressed_text', 'text')$/;"	v	class:zTXtPayloadStructure
+_fields	old/png.py	/^    _fields = ('keyword', 'text')$/;"	v	class:tEXtPayloadStructure
+_fields	old/png.py	/^    _fields = ('white_point_x', 'white_point_y', 'red_x', 'red_y', 'green_x',$/;"	v	class:cHRMPayloadStructure
+_fields	old/structures.py	/^    _fields = ("contents",)$/;"	v	class:ContainerStructure
+_fields	old/structures.py	/^    _fields = ("meaning",)$/;"	v	class:CodedIntegerStructure
+_fields	old/structures.py	/^    _fields = ("raw_data", "size")$/;"	v	class:BaseStructure
+_fields	old/structures.py	/^    _fields = ("value",)$/;"	v	class:DerivedStructure
+_fields	old/structures.py	/^    _fields = ("value",)$/;"	v	class:IntegerStructure
+_validate	old/node.py	/^    def _validate(self):$/;"	m	class:_Node
+_validate	old/node2.py	/^    def _validate(self):$/;"	m	class:_Node
+add_child	path.py	/^    def add_child(self, child):$/;"	m	class:PathNode
+all_from_buffer	old/node.py	/^    def all_from_buffer(cls, buffer, parent):$/;"	m	class:_Node
+all_from_buffer	old/node2.py	/^    def all_from_buffer(cls, buffer, parent):$/;"	m	class:_Node
+allowed_color_type_bit_depths	old/png.py	/^    allowed_color_type_bit_depths = {$/;"	v	class:IHDRPayloadStructure
+ancestors	node.py	/^    def ancestors(self, criteria=None, or_self=False):$/;"	m	class:Node
+apply_predicate	old/node.py	/^    def apply_predicate(self, nodes, predicate):$/;"	m	class:Path
+apply_predicate	old/node2.py	/^    def apply_predicate(self, nodes, predicate):$/;"	m	class:Path
+bKGDPayloadStructure	old/png.py	/^class bKGDPayloadStructure(HomogenousSequenceStructure):$/;"	c
+between	old/node.py	/^def between(a,b):$/;"	f
+between	old/node2.py	/^def between(a,b):$/;"	f
+bit_flag	old/node.py	/^def bit_flag(attr, bit, idx=None, transform=None):$/;"	f
+bit_flag	old/node2.py	/^def bit_flag(attr, bit, idx=None, transform=None):$/;"	f
+c	old/png.py	/^                c = 0xEDB88320 ^ (c >> 1)$/;"	v	class:ChunkCRCStructure
+c	old/png.py	/^                c = c >> 1$/;"	v	class:ChunkCRCStructure
+c	old/png.py	/^        c = n$/;"	v	class:ChunkCRCStructure
+cHRMPayloadStructure	old/png.py	/^class cHRMPayloadStructure(HomogenousSequenceStructure):$/;"	c
+children	node.py	/^    def children(self):$/;"	m	class:Node
+chunk_orderings	old/png.py	/^    chunk_orderings = [$/;"	v	class:PNGStructure
+consume_byte	old/node.py	/^    def consume_byte(cls, buff):$/;"	m	class:_Node
+consume_byte	old/node2.py	/^    def consume_byte(cls, buff):$/;"	m	class:_Node
+consume_byte	old/structures.py	/^    def consume_byte(self, buffer, buffer_idx, offset):$/;"	m	class:BaseStructure
+consume_bytes	old/node.py	/^    def consume_bytes(cls, buff, n):$/;"	m	class:_Node
+consume_bytes	old/node2.py	/^    def consume_bytes(cls, buff, n):$/;"	m	class:_Node
+consume_from_buffer	old/png.py	/^    def consume_from_buffer(self, buffer, buffer_idx, **kwargs):$/;"	m	class:ChunkTypeStructure
+consume_from_buffer	old/png.py	/^    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):$/;"	m	class:ColorTypeStructure
+consume_from_buffer	old/png.py	/^    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):$/;"	m	class:UnknownChunkPayloadStructure
+consume_from_buffer	old/png.py	/^    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):$/;"	m	class:cHRMPayloadStructure
+consume_from_buffer	old/png.py	/^    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):$/;"	m	class:gAMAPayloadStructure
+consume_from_buffer	old/png.py	/^    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):$/;"	m	class:tEXtPayloadStructure
+consume_from_buffer	old/png.py	/^    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):$/;"	m	class:zTXtPayloadStructure
+consume_from_buffer	old/structures.py	/^    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):$/;"	m	class:CodedIntegerStructure
+consume_from_buffer	old/structures.py	/^    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):$/;"	m	class:ContainerStructure
+consume_from_buffer	old/structures.py	/^    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):$/;"	m	class:DerivedStructure
+consume_from_buffer	old/structures.py	/^    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):$/;"	m	class:HomogenousSequenceStructure
+consume_from_buffer	old/structures.py	/^    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):$/;"	m	class:IntegerStructure
+consume_from_buffer	old/structures.py	/^    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):$/;"	m	class:PayloadStructure
+consume_from_buffer	old/structures.py	/^    def consume_from_buffer(self, buffer, buffer_idx=0, **kwargs):$/;"	m	class:StaticStructure
+consume_integer	old/structures.py	/^    def consume_integer(self, buffer, buffer_idx=0):$/;"	m	class:IntegerStructure
+consume_sequence	old/structures.py	/^    def consume_sequence(self, buffer, buffer_idx):$/;"	m	class:HomogenousSequenceStructure
+contexts	path.py	/^    contexts = []$/;"	v	class:PathNode
+contexts	path.py	/^    contexts = set("start") $/;"	v	class:Path
+crc_table	old/png.py	/^    crc_table = []$/;"	v	class:ChunkCRCStructure
+decompress	old/png2.py	/^def decompress(node):$/;"	f
+derive_and_validate	old/node.py	/^    def derive_and_validate(self):$/;"	m	class:_Node
+derive_and_validate	old/node2.py	/^    def derive_and_validate(self):$/;"	m	class:_Node
+derive_sample_depth	old/png.py	/^    def derive_sample_depth(self, **kwargs):$/;"	m	class:IHDRPayloadStructure
+descendents	node.py	/^    def descendents(self, criteria=None, or_self=False):$/;"	m	class:Node
+evaluate	path.py	/^    def evaluate(self, node):$/;"	m	class:TerminalNode
+evaluate	path.py	/^    def evaluate(self, nodes):$/;"	m	class:PathNode
+find	old/node.py	/^    def find(self, classnames, attributes=None, limit=None):$/;"	m	class:_Node
+find	old/node2.py	/^    def find(self, classnames, attributes=None, limit=None):$/;"	m	class:_Node
+find	old/structures.py	/^    def find(self, clsname, attributes=(), limit=None):$/;"	m	class:StructureNode
+find_all	old/node.py	/^    def find_all(self, classnames, attributes=None, limit=None):$/;"	m	class:_Node
+find_all	old/node2.py	/^    def find_all(self, classnames, attributes=None, limit=None):$/;"	m	class:_Node
+find_all	old/structures.py	/^    def find_all(self, clsname, attributes=()):$/;"	m	class:StructureNode
+find_one	old/structures.py	/^    def find_one(self, clsname, attributes=()):$/;"	m	class:StructureNode
+format_dict	old/structures.py	/^    format_dict = {$/;"	v	class:IntegerStructure
+from_buffer	old/node.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:BytestringNode
+from_buffer	old/node.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:DefinedChildrenNode
+from_buffer	old/node.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:DelegatingNode
+from_buffer	old/node.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:IntegerNode
+from_buffer	old/node.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:IntegerSequenceNode
+from_buffer	old/node.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:NodeSequenceNode
+from_buffer	old/node.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:NullTerminatedStringNode
+from_buffer	old/node.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:StaticNode
+from_buffer	old/node.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:StringNode
+from_buffer	old/node.py	/^    def from_buffer(cls, buffer, parent):$/;"	m	class:_Node
+from_buffer	old/node2.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:BytestringNode
+from_buffer	old/node2.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:DefinedChildrenNode
+from_buffer	old/node2.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:DelegatingNode
+from_buffer	old/node2.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:IntegerNode
+from_buffer	old/node2.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:IntegerSequenceNode
+from_buffer	old/node2.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:NodeSequenceNode
+from_buffer	old/node2.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:NullTerminatedStringNode
+from_buffer	old/node2.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:StaticNode
+from_buffer	old/node2.py	/^    def from_buffer(cls, buff, parent):$/;"	f	function:StringNode
+from_buffer	old/node2.py	/^    def from_buffer(cls, buffer, parent):$/;"	m	class:_Node
+gAMAPayloadStructure	old/png.py	/^class gAMAPayloadStructure(IntegerStructure):$/;"	c
+generate_crc	old/png.py	/^    def generate_crc(cls, data):$/;"	m	class:ChunkCRCStructure
+get_properties	old/png.py	/^    def get_properties(self, seq, buffer_idx):$/;"	m	class:ChunkTypeStructure
+get_size	old/png.py	/^    def get_size(cls, parent_node):$/;"	m	class:ChunkPayloadStructure
+get_string_rep	old/png.py	/^    def get_string_rep(self, seq, buffer_idx):$/;"	m	class:ChunkTypeStructure
+hISTPayloadStructure	old/png.py	/^class hISTPayloadStructure(HomogenousSequenceStructure):$/;"	c
+indent	old/png.py	/^            indent = "   " * depth$/;"	v	class:PNGRoot
+is_ancestor_of	old/node.py	/^    def is_ancestor_of(self, node):$/;"	m	class:_Node
+is_ancestor_of	old/node2.py	/^    def is_ancestor_of(self, node):$/;"	m	class:_Node
+is_descendent_of	old/node.py	/^    def is_descendent_of(self, node):$/;"	m	class:_Node
+is_descendent_of	old/node2.py	/^    def is_descendent_of(self, node):$/;"	m	class:_Node
+is_in	old/node.py	/^def is_in(a,b):$/;"	f
+is_in	old/node2.py	/^def is_in(a,b):$/;"	f
+is_leaf	old/node.py	/^    def is_leaf(self):$/;"	m	class:_Node
+is_leaf	old/node2.py	/^    def is_leaf(self):$/;"	m	class:_Node
+iter_breadth_first	old/node.py	/^    def iter_breadth_first(self):$/;"	m	class:_Node
+iter_breadth_first	old/node2.py	/^    def iter_breadth_first(self):$/;"	m	class:_Node
+iter_depth_first	old/node.py	/^    def iter_depth_first(self):$/;"	m	class:_Node
+iter_depth_first	old/node2.py	/^    def iter_depth_first(self):$/;"	m	class:_Node
+iter_depth_first	old/structures.py	/^    def iter_depth_first(self):$/;"	m	class:StructureNode
+iter_nodecls	path.py	/^    def iter_nodecls(self):$/;"	m	class:Path
+iterattributes	old/structures.py	/^    def iterattributes(self):$/;"	m	class:StructureNode
+iterchildren	old/structures.py	/^    def iterchildren(self):$/;"	m	class:StructureNode
+left	path.py	/^    left = r"^()"$/;"	v	class:PathNode
+left	path.py	/^    left = r"^(.*?)"$/;"	v	class:TestNode
+lookup	old/node.py	/^def lookup(attr, d, default="unknown"):$/;"	f
+lookup	old/node2.py	/^def lookup(attr, d, default="unknown"):$/;"	f
+mandatory_chunks	old/png.py	/^    mandatory_chunks = ["IHDR", "IDAT", "IEND"]$/;"	v	class:PNGStructure
+match	old/node.py	/^    def match(self, classnames=None, attributes=None):$/;"	m	class:_Node
+match	old/node2.py	/^    def match(self, classnames=None, attributes=None):$/;"	m	class:_Node
+matches	node.py	/^    def matches(self, criteria=None):$/;"	m	class:Node
+middle	path.py	/^    middle = r"()"$/;"	v	class:PathNode
+middle	path.py	/^    middle = r"(?:\\()(.*)(?:\\))"$/;"	v	class:TestNode
+middle	path.py	/^    middle = r"(\\d+)"$/;"	v	class:TestNode2
+name	old/node.py	/^    name = re.compile(r"^[_a-zA-Z][_a-zA-Z0-9]*$")$/;"	v	class:Path
+name	old/node2.py	/^    name = re.compile(r"^[_a-zA-Z][_a-zA-Z0-9]*$")$/;"	v	class:Path
+name	old/png.py	/^                name = item.name + "(" + item.clsname + ")"$/;"	v	class:PNGRoot
+name	old/png.py	/^    name = "chunk"$/;"	v	class:PNGChunkStructure
+name	old/png.py	/^    name = "chunk_crc"$/;"	v	class:ChunkCRCStructure
+name	old/png.py	/^    name = "chunk_type"$/;"	v	class:ChunkTypeStructure
+name	old/png.py	/^    name = "color_type"$/;"	v	class:ColorTypeStructure
+name	old/png.py	/^    name = "payload"$/;"	v	class:ChunkPayloadStructure
+name	old/png.py	/^    name = "payload"$/;"	v	class:UnknownChunkPayloadStructure
+name	old/png.py	/^    name = "png_file_signature"$/;"	v	class:PNGFileSignatureStructure
+name	old/structures.py	/^    name = "payload"$/;"	v	class:PayloadStructure
+new_contexts	path.py	/^    new_contexts = (None, "inner", None)$/;"	v	class:TestNode
+new_contexts	path.py	/^    new_contexts = (None, "inner", None)$/;"	v	class:TestNode2
+new_contexts	path.py	/^    new_contexts = (None, None, None)$/;"	v	class:TerminalNode
+node_classes	path.py	/^    node_classes = []$/;"	v	class:Path
+number	old/node.py	/^    number = re.compile(r"^-?\\d+$")$/;"	v	class:Path
+number	old/node2.py	/^    number = re.compile(r"^-?\\d+$")$/;"	v	class:Path
+op_names	old/node.py	/^op_names = {$/;"	v
+op_names	old/node2.py	/^op_names = {$/;"	v
+pHYsPayloadStructure	old/png.py	/^class pHYsPayloadStructure(PayloadStructure):$/;"	c
+parent	node.py	/^    def parent(self):$/;"	m	class:Node
+parse	path.py	/^    def parse(self, path, parentnode=None):$/;"	m	class:Path
+payload_registry	old/png.py	/^    payload_registry = {}$/;"	v	class:ChunkPayloadStructure
+png	old/png.py	/^        png = PNGStructure()$/;"	v	class:PNGRoot
+pngfield	old/png.py	/^        pngfield = png.consume_from_buffer(f, 0)$/;"	v	class:PNGRoot
+precedence	path.py	/^    precedence = 0$/;"	v	class:TestNode
+precedence	path.py	/^    precedence = 10$/;"	v	class:TestNode2
+precedence	path.py	/^    precedence = 100000$/;"	v	class:PathNode
+predicate	old/node.py	/^    predicate = re.compile("(^.*)\\[(.*)\\]$")$/;"	v	class:Path
+predicate	old/node2.py	/^    predicate = re.compile("(^.*)\\[(.*)\\]$")$/;"	v	class:Path
+qualname	old/node.py	/^    def qualname(self):$/;"	m	class:_Node
+qualname	old/node2.py	/^    def qualname(self):$/;"	m	class:_Node
+raw_data	old/structures.py	/^    def raw_data(self):$/;"	m	class:StructureNode
+raw_data	old/structures.py	/^    def raw_data(self, value):$/;"	m	class:StructureNode
+register	path.py	/^    def register(cls, nodecls):$/;"	m	class:Path
+registered_payload	old/png.py	/^def registered_payload(cls):$/;"	f
+registration_id	old/png.py	/^    registration_id = "IDAT"$/;"	v	class:IDATPayloadStructure
+registration_id	old/png.py	/^    registration_id = "IEND"$/;"	v	class:IENDPayloadStructure
+registration_id	old/png.py	/^    registration_id = "IHDR"$/;"	v	class:IHDRPayloadStructure
+registration_id	old/png.py	/^    registration_id = "PLTE"$/;"	v	class:PLTEPayloadStructure
+registration_id	old/png.py	/^    registration_id = "bKGD"$/;"	v	class:bKGDPayloadStructure
+registration_id	old/png.py	/^    registration_id = "cHRM"$/;"	v	class:cHRMPayloadStructure
+registration_id	old/png.py	/^    registration_id = "gAMA"$/;"	v	class:gAMAPayloadStructure
+registration_id	old/png.py	/^    registration_id = "hIST"$/;"	v	class:hISTPayloadStructure
+registration_id	old/png.py	/^    registration_id = "pHYs"$/;"	v	class:pHYsPayloadStructure
+registration_id	old/png.py	/^    registration_id = "sBIT"$/;"	v	class:sBITPayloadStructure
+registration_id	old/png.py	/^    registration_id = "tEXt"$/;"	v	class:tEXtPayloadStructure
+registration_id	old/png.py	/^    registration_id = "tIME"$/;"	v	class:tIMEPayloadStructure
+registration_id	old/png.py	/^    registration_id = "tRNS"$/;"	v	class:tRNSPayloadStructure
+registration_id	old/png.py	/^    registration_id = "zTXt"$/;"	v	class:zTXtPayloadStructure
+resulting_context	path.py	/^    resulting_context = None$/;"	v	class:PathNode
+right	path.py	/^    right = r"()$"$/;"	v	class:PathNode
+right	path.py	/^    right = r"(.*)$"$/;"	v	class:TestNode
+root	node.py	/^    def root(self):$/;"	m	class:Node
+root	old/node.py	/^    def root(self):$/;"	m	class:_Node
+root	old/node2.py	/^    def root(self):$/;"	m	class:_Node
+s	old/png.py	/^                    s = s[:61] + "..."$/;"	v	class:PNGRoot
+s	old/png.py	/^                s = str(item)$/;"	v	class:PNGRoot
+sBITPayloadStructure	old/png.py	/^class sBITPayloadStructure(HomogenousSequenceStructure):$/;"	c
+set_children	old/structures.py	/^    def set_children(self, fields,  defaults, data):$/;"	m	class:StructureNode
+setdefault	old/structures.py	/^    def setdefault(self, key, default):$/;"	m	class:StructureNode
+should_stop	old/structures.py	/^    def should_stop(self):$/;"	m	class:ContainerStructure
+siblings	node.py	/^    def siblings(self):$/;"	m	class:Node
+siblings	old/node.py	/^    def siblings(self):$/;"	m	class:_Node
+siblings	old/node2.py	/^    def siblings(self):$/;"	m	class:_Node
+signature	old/png.py	/^    signature = b'\\x89PNG\\r\\n\\x1a\\n'$/;"	v	class:PNGFileSignatureStructure
+simple_validation	old/node.py	/^def simple_validation(name, op, value):$/;"	f
+simple_validation	old/node2.py	/^def simple_validation(name, op, value):$/;"	f
+singular_chunks	old/png.py	/^    singular_chunks = ["IHDR", "PLTE", "IEND", "cHRM", "gAMA", "sBIT",$/;"	v	class:PNGStructure
+stack	old/png.py	/^        stack = [(pngfield, 0, None)]$/;"	v	class:PNGRoot
+tEXtPayloadStructure	old/png.py	/^class tEXtPayloadStructure(HomogenousSequenceStructure):$/;"	c
+tIMEPayloadStructure	old/png.py	/^class tIMEPayloadStructure(PayloadStructure):$/;"	c
+tRNSPayloadStructure	old/png.py	/^class tRNSPayloadStructure(HomogenousSequenceStructure):$/;"	c
+terminal	path.py	/^    terminal = False$/;"	v	class:PathNode
+terminal	path.py	/^    terminal = True$/;"	v	class:TerminalNode
+test	old/png2.py	/^def test():$/;"	f
+test	path.py	/^def test():$/;"	f
+test2	old/png2.py	/^def test2():$/;"	f
+tree_string	old/node.py	/^    def tree_string(self):$/;"	m	class:_Node
+tree_string	old/node2.py	/^    def tree_string(self):$/;"	m	class:_Node
+validate_bit_depth	old/png.py	/^    def validate_bit_depth(self, validation_value):$/;"	m	class:IHDRPayloadStructure
+validate_color_type	old/png.py	/^    def validate_color_type(self, validation_value):$/;"	m	class:IHDRPayloadStructure
+validate_compression_method	old/png.py	/^    def validate_compression_method(self, validation_value):$/;"	m	class:IHDRPayloadStructure
+validate_crc	old/png.py	/^    def validate_crc(self, validation_value):$/;"	m	class:PNGChunkStructure
+validate_dimension	old/png.py	/^    def validate_dimension(self, value, dimension):$/;"	m	class:IHDRPayloadStructure
+validate_filter_method	old/png.py	/^    def validate_filter_method(self, validation_value):$/;"	m	class:IHDRPayloadStructure
+validate_height	old/png.py	/^    def validate_height(self, validation_value):$/;"	m	class:IHDRPayloadStructure
+validate_interlace__method	old/png.py	/^    def validate_interlace__method(self, validation_value):$/;"	m	class:IHDRPayloadStructure
+validate_length	old/png.py	/^    def validate_length(self, validation_value):$/;"	m	class:PNGChunkStructure
+validate_png_chunks	old/png.py	/^    def validate_png_chunks(self, png_chunks):$/;"	m	class:PNGStructure
+validate_reserved	old/png.py	/^    def validate_reserved(self, validation_value):$/;"	m	class:ChunkTypeStructure
+validate_value	old/png.py	/^    def validate_value(self, validation_value):$/;"	m	class:ColorTypeStructure
+validate_width	old/png.py	/^    def validate_width(self, validation_value):$/;"	m	class:IHDRPayloadStructure
+warn	old/structures.py	/^    def warn(self, message):$/;"	m	class:BaseStructure
+zTXtPayloadStructure	old/png.py	/^class zTXtPayloadStructure(HomogenousSequenceStructure):$/;"	c
