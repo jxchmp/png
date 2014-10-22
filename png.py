@@ -29,7 +29,7 @@ def decompress(node, value):
 # Payloads                                                                   #
 ##############################################################################
 
-PNGPayloads = DelegatingDef({}, Path().chunk_type.value + "_payload")
+PNGPayloads = DelegatingDef({}, Path().parent.chunk_type.value + "_payload")
 
 # An unknown chunk payload is treated as a bytestring, using the length given
 # in the chunk length field
@@ -174,7 +174,6 @@ PNGPayloads.register(
                     [lambda n: n._name == "tRNS_payload"]),
                     "==", 0, stage="pre", error=ValidationError,
                     description="tRNS chunk can only appear once"),
-
         ]
     ), "tRNS_payload"
 )
@@ -291,7 +290,7 @@ PNGPayloads.register(
                 IntegerDef("significant_alpha_bits", "!B")
            ]),
         "default": BytestringDef("sBIT_payload", 
-                       Path().siblings[0].attributes["value"]
+                       Path().parent.siblings[0].attributes["value"]
                    )
         },
         Path().root.descendents(
@@ -402,7 +401,7 @@ PNGPayloads.register(
                 ]),
             "default": 0
             },
-            Path().compression_flag.value
+            Path().parent.compression_flag.value
         )
     ])
 )
@@ -512,7 +511,7 @@ PNGPayloads.register(
                         IntegerDef("alpha", "!H"),
                         IntegerDef("frequency", "!H")
                    ])
-                }, Path().parent.sample_depth.value
+                }, Path().parent.parent.sample_depth.value
             ), ((Path().parent.parent.children[0].value -
                 (Path().parent.palette_name.length + 1)) //
                 (((Path().parent.sample_depth.value // 8) * 4) + 2))

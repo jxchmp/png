@@ -573,19 +573,29 @@ class DelegatingDef(Definition):
         if DEBUG:
             print("Constructing {}".format(self.name))
             print("validating stage - pre")
-        self.validate_stage(parent, "pre")
+        # create a fake node so that Path semantics work properly
+        fakenode = Node(self.name, parent)
+        self.validate_stage(fakenode, "pre")
         if hasattr(self.keyfunc, "resolve_path"):
-            key = self.keyfunc.resolve_path(parent)
+            key = self.keyfunc.resolve_path(fakenode)
         else:
-            key = self.keyfunc(parent)
+            key = self.keyfunc(fakenode)
         delegated = self.defdict.get(key, self.defdict.get("default"))
         while not isinstance(delegated, Definition):
             delegated = self.defdict.get(
                 delegated, self.defdict.get("default"))
             if delegated is None:
                 break
+        # delete the fake node before constructing the real one
+        del fakenode.parent.children[-1]
         if delegated:
             return delegated.construct(source, parent)
+        else:
+            parent.add_data({"validation":[
+                ValidationWarning(
+                     "Failed to find a definition to delegate to."
+                )
+            ]}, meta=True)
 
     def register(self, definition, name=None):
         self.defdict[name if name else definition.name] = definition
