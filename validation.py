@@ -11,19 +11,19 @@ DEBUG = False
 # Operator data                                                              #
 ##############################################################################
 
-Op = namedtuple("Op", ["function", "symbol", "name", "reversed"])
+Op = namedtuple("Op", ["function", "symbol", "name", "reversed", "pass_node"])
 
 class OpInfo(object):
     operators = [
-        Op(operator.lt, "<", "be less than", False),
-        Op(operator.le, "<=", "be less than or equal to", False),
-        Op(operator.eq, "==", "be equal to", False),
-        Op(operator.ne, "!=", "be unequal to", False),
-        Op(operator.ge, ">=", "be greater than or equal to", False),
-        Op(operator.gt, ">", "be greater than", False),
-        Op(operator.contains, "in", "be in", True),
-        Op(lambda a,b: a not in b, "not in", "not be in", False),
-        Op(re.match, "matches", "match",  True)
+        Op(operator.lt, "<", "be less than", False, False),
+        Op(operator.le, "<=", "be less than or equal to", False, False),
+        Op(operator.eq, "==", "be equal to", False, False),
+        Op(operator.ne, "!=", "be unequal to", False, False),
+        Op(operator.ge, ">=", "be greater than or equal to", False, False),
+        Op(operator.gt, ">", "be greater than", False, False),
+        Op(operator.contains, "in", "be in", True, False),
+        Op(lambda a,b: a not in b, "not in", "not be in", False, False),
+        Op(re.match, "matches", "match",  True, False)
     ]
     op_func_dict = {op.function: op for op in operators}
     op_symbol_dict = {op.symbol: op for op in operators}
@@ -35,7 +35,7 @@ class OpInfo(object):
 class Validation(object):
     known_stages = ["pre", "per_child", "pre_derivation", "post"]
     def __init__(self, value, func, comparison, stage="post",
-                 error=None, description=None):
+                 error=None, description=""):
         self.value = value
         if callable(func):
             self.func = func
@@ -46,12 +46,13 @@ class Validation(object):
             raise ValueError("Unknown stage '{}'".format(stage))
         self.stage = stage
         self.error = error if error else ValidationWarning
-        self.description = description
+        self.description = description if description else ""
         self.is_validation = True
 
     def __str__(self):
-        return ("Validation({value}, {func}, {comparison}, stage={stage}, " +
+        return ("{cls}({value}, {func}, {comparison}, stage={stage}, " +
                 "error={error})").format(
+            cls = self.__class__.__name__,
             value=self.value,
             func = self.func,
             comparison=self.comparison,
@@ -82,7 +83,10 @@ class Validation(object):
                 arg1 = value
                 arg2 = comparison
             try:
-                res = self.func(arg1, arg2)
+                if OpInfo.op_func_dict[self.func].pass_node:
+                    res = self.func(arg1, arg2, node)
+                else:
+                    res = self.func(arg1, arg2)
             except TypeError as err:
                 raise TypeError(
                     "Error applying '{}' to '{}' and '{}': {}".format(
@@ -94,11 +98,12 @@ class Validation(object):
 
     def error_message(self, node, value, comparison):
         opinfo = OpInfo.op_func_dict.get(self.func)
-        desc = ("'" + self.description + "'") if self.description else ""
+        desc = (self.description + " ") if self.description else ""
         if opinfo:
-            return ("Validation failed while checking {val} on {node}; " +
-                    "Expected value to {opdesc} {comparison} but " +
-                    "found {value}.").format(
+            return ("{desc}(Validation failed while checking {val} on " +
+                    "{node}; Expected value to {opdesc} {comparison} but " +
+                    "found {value})").format(
+                        desc = desc,
                         val = self.value,
                         node = node,
                         opdesc = opinfo.name,
@@ -136,6 +141,8 @@ class Validation(object):
         self._validate_and_or(other)
         return OrValidation(self, other)
 
+    
+
 
 class CompoundValidation(Validation):
     def __init__(self, v1, v2):
@@ -153,23 +160,29 @@ class CompoundValidation(Validation):
         self.stage = self.known_stages[max(
             self.known_stages.index(v1.stage),
             self.known_stages.index(v2.stage))]
-
+        self.value = None
+        self.comparison = None
+        self.func = None
 
 
 class AndValidation(CompoundValidation):
-    def __call__(self, node):
-        self.v1()
-        self.v2()
+    def __call__(self, definition, node, descendent=None):
+        if DEBUG:
+            print("AndValidation called")
+        self.v1(definition, node, descendent)
+        self.v2(definition, node, descendent)
 
     def validate(self, node):
         return (None, None, v1.validate(node)[2] and v2.validate(node)[2])
 
 class OrValidation(CompoundValidation):
-    def __call__(self, node):
+    def __call__(self, definition, node, descendent):
+        if DEBUG:
+            print("OrValidation called")
         error = None
         for v in (self.v1, self.v2):
             try:
-                v(node)
+                v(definition, node, descendent)
             except ValidationException as err:
                 if error:
                     raise error

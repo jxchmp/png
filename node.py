@@ -192,4 +192,16 @@ class Node(object):
     def descendents(self, criteria=None, or_self=False):
         return [node for node in self.gen_descendents(criteria, or_self)]
 
+    def count_descendents(self, criteria=None, or_self=False):
+        return len(self.descendents(criteria, or_self))
 
+    def __iter__(self):
+        for node in self.descendents(or_self=True):
+            yield node
+
+    def all_nodes(self):
+        return [node for node in self]
+
+    def index(self, node=None):
+        node =  node if node else self
+        return self.root.all_nodes().index(node)
